@@ -286,7 +286,7 @@ function showTriggeredAlerts(alerts = []) {
     stack.appendChild(toast);
     window.setTimeout(() => toast.remove(), 10000);
     if ("Notification" in window && Notification.permission === "granted") {
-      new Notification(`FVT ${alert.symbol}`, { body: alert.message, tag: alert.id });
+      new Notification(`Matrix ${alert.symbol}`, { body: alert.message, tag: alert.id });
     }
   }
 }
@@ -294,7 +294,7 @@ function showTriggeredAlerts(alerts = []) {
 function Sidebar({ route }) {
   return (
     <aside className="mfe-sidebar">
-      <div className="brand-mark">FVT</div>
+      <div className="brand-mark" aria-label="Matrix"><span className="matrix-symbol">M</span><span className="matrix-word">Matrix</span></div>
       <nav>
         <a href="#dashboard" className={route === "dashboard" ? "active" : ""}>Dashboard</a>
         <a href="#signals" className={route === "signals" ? "active" : ""}>Sinyaller</a>
@@ -312,7 +312,7 @@ function Topbar({ onRefresh }) {
     <header className="topbar">
       <div>
         <p className="eyebrow">Canlı piyasa izleme</p>
-        <h1>Hisse Takip Dashboard</h1>
+        <h1>Matrix Dashboard</h1>
       </div>
       <div className="topbar-actions">
         <Badge tone={proxyOk ? "success" : "warning"}>{proxyOk ? "Proxy canlı" : "Proxy kontrol"}</Badge>

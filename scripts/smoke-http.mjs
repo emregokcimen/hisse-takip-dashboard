@@ -63,7 +63,7 @@ const checks = [
     name: "shell html",
     url: "http://127.0.0.1:8765/",
     text: true,
-    validate: (text) => text.includes("FVT Shell") && text.includes("/src/main.jsx")
+    validate: (text) => text.includes("Matrix Shell") && text.includes("/src/main.jsx")
   }
 ];
 

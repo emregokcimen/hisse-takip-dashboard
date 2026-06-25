@@ -19,15 +19,59 @@
 }
 
 .brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 54px;
+  margin-bottom: 28px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(14, 165, 233, 0.16));
+  color: #fff;
+  font-weight: 900;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 14px 26px rgba(8, 47, 73, 0.22);
+}
+
+.matrix-symbol {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 28px;
-  border-radius: 8px;
-  background: #3e97ff;
-  color: white;
-  font-weight: 800;
+  width: 38px;
+  height: 38px;
+  margin-left: 8px;
+  border-radius: 9px;
+  background: #0f172a;
+  color: #38bdf8;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.matrix-symbol::before,
+.matrix-symbol::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #50cd89;
+}
+
+.matrix-symbol::before {
+  top: 6px;
+  right: 6px;
+}
+
+.matrix-symbol::after {
+  left: 7px;
+  bottom: 7px;
+  background: #f6c343;
+}
+
+.matrix-word {
+  color: #f8fafc;
+  font-size: 18px;
+  letter-spacing: 0;
 }
 
 .mfe-sidebar nav {

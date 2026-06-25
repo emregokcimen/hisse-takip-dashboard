@@ -52,8 +52,8 @@ if (Test-Port 8766) {
 }
 
 if (Test-Port 8765) {
-  if (-not (Test-Http "http://127.0.0.1:8765/" "FVT Shell")) {
-    throw "8765 portu dolu fakat beklenen FVT Shell yanit vermiyor. Lutfen yanlis sureci kapatin."
+  if (-not (Test-Http "http://127.0.0.1:8765/" "Matrix Shell")) {
+    throw "8765 portu dolu fakat beklenen Matrix Shell yanit vermiyor. Lutfen yanlis sureci kapatin."
   }
   Write-Host "Shell zaten calisiyor: http://127.0.0.1:8765/"
 } else {
@@ -65,7 +65,7 @@ if (-not (Wait-Http "http://127.0.0.1:8766/api/health" "hisse-price-proxy" 20)) 
   throw "Fiyat proxy hazir hale gelemedi: http://127.0.0.1:8766/api/health"
 }
 
-if (-not (Wait-Http "http://127.0.0.1:8765/" "FVT Shell" 20)) {
+if (-not (Wait-Http "http://127.0.0.1:8765/" "Matrix Shell" 20)) {
   throw "Shell hazir hale gelemedi: http://127.0.0.1:8765/"
 }
 
