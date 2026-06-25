@@ -753,28 +753,45 @@ async function getFinvizAnalysis(symbol) {
     return cached.data;
   }
   counters.cacheMisses += 1;
-  const payload = await timedSource("Finviz", async () => {
-    const url = `https://finviz.com/quote.ashx?t=${encodeURIComponent(key)}&p=d`;
-    const response = await fetchWithTimeout(url, { headers: { Accept: "text/html" } }, 9000);
-    if (!response.ok) throw new Error(`Finviz HTTP ${response.status}`);
-    const html = await response.text();
-    const targetMeanPrice = parseNumberFromText(readFinvizField(html, "Target Price"));
-    const recommendation = parseNumberFromText(readFinvizField(html, "Recom"));
-    const earningsDate = readFinvizField(html, "Earnings") || null;
-    const pe = readFinvizField(html, "P/E") || null;
-    const epsTtm = readFinvizField(html, "EPS (ttm)") || null;
-    return {
+  let payload;
+  try {
+    payload = await timedSource("Finviz", async () => {
+      const url = `https://finviz.com/quote.ashx?t=${encodeURIComponent(key)}&p=d`;
+      const response = await fetchWithTimeout(url, { headers: { Accept: "text/html" } }, 9000);
+      if (!response.ok) throw new Error(`Finviz HTTP ${response.status}`);
+      const html = await response.text();
+      const targetMeanPrice = parseNumberFromText(readFinvizField(html, "Target Price"));
+      const recommendation = parseNumberFromText(readFinvizField(html, "Recom"));
+      const earningsDate = readFinvizField(html, "Earnings") || null;
+      const pe = readFinvizField(html, "P/E") || null;
+      const epsTtm = readFinvizField(html, "EPS (ttm)") || null;
+      return {
+        symbol: key,
+        source: "Finviz HTML",
+        updatedAt: Math.floor(Date.now() / 1000),
+        targetMeanPrice,
+        recommendation,
+        earningsDate,
+        pe,
+        epsTtm,
+        available: !!(targetMeanPrice || recommendation || earningsDate)
+      };
+    });
+  } catch (error) {
+    pushErrorLog({ url: `/api/analysis/${key}` }, error);
+    payload = {
       symbol: key,
-      source: "Finviz HTML",
+      source: "Finviz unavailable",
       updatedAt: Math.floor(Date.now() / 1000),
-      targetMeanPrice,
-      recommendation,
-      earningsDate,
-      pe,
-      epsTtm,
-      available: !!(targetMeanPrice || recommendation || earningsDate)
+      targetMeanPrice: null,
+      recommendation: null,
+      earningsDate: null,
+      pe: null,
+      epsTtm: null,
+      available: false,
+      warning: error.message
     };
-  });
+  }
   analysisCache.set(key, { cacheTime: Date.now(), data: payload });
   return payload;
 }

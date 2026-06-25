@@ -598,6 +598,87 @@ textarea:focus {
   gap: 8px;
 }
 
+.signal-hero-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.signal-hero-actions span {
+  color: #5e6278;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.signal-research-panel {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.research-card,
+.research-list {
+  min-height: 112px;
+  border: 1px solid #e4e6ef;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+  padding: 12px;
+}
+
+.research-card span,
+.research-list > span {
+  display: block;
+  color: #7e8299;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.research-card strong {
+  display: block;
+  margin-top: 8px;
+  color: #181c32;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.research-card small {
+  display: block;
+  margin-top: 8px;
+  color: #3e97ff;
+  font-weight: 800;
+}
+
+.research-list {
+  display: grid;
+  gap: 7px;
+}
+
+.research-list div {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+}
+
+.research-list b,
+.research-list strong {
+  color: #181c32;
+  font-size: 12px;
+}
+
+.research-list small {
+  overflow: hidden;
+  color: #7e8299;
+  font-size: 11px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .signal-tabs {
   display: flex;
   gap: 8px;
@@ -631,7 +712,7 @@ textarea:focus {
 
 .signal-table {
   width: 100%;
-  min-width: 1180px;
+  min-width: 1280px;
   border-collapse: collapse;
 }
 
@@ -703,6 +784,47 @@ textarea:focus {
   gap: 6px;
 }
 
+.trigger-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 120px;
+}
+
+.trigger-stack span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border-radius: 6px;
+  padding: 0 7px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.trigger-stack small {
+  margin: 0;
+}
+
+.trigger-stack .positive {
+  background: #e8fff3;
+  color: #0b8f67;
+}
+
+.trigger-stack .negative {
+  background: #fff5f8;
+  color: #d9214e;
+}
+
+.trigger-stack .warning {
+  background: #fff8dd;
+  color: #b58105;
+}
+
+.trigger-stack .neutral {
+  background: #eef6ff;
+  color: #3e97ff;
+}
+
 .signal-reasons span,
 .signal-explain span {
   display: inline-flex;
@@ -719,6 +841,55 @@ textarea:focus {
 
 .signal-explain {
   margin-top: 12px;
+}
+
+.fib-level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.fib-level-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #5e6278;
+  font-size: 12px;
+}
+
+.fib-level-head strong {
+  color: #181c32;
+}
+
+.fib-level-grid > div:not(.fib-level-head) {
+  border: 1px solid #e4e6ef;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 10px;
+}
+
+.fib-level-grid > div.extension {
+  border-color: rgba(246, 195, 67, 0.5);
+  background: #fffaf0;
+}
+
+.fib-level-grid span,
+.fib-level-grid small {
+  display: block;
+  color: #7e8299;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.fib-level-grid strong {
+  display: block;
+  margin: 5px 0;
+  color: #181c32;
+  font-size: 15px;
 }
 
 .alert-rules-grid {
@@ -1310,6 +1481,28 @@ textarea:focus {
   font-weight: 900;
 }
 
+.fib-level-line line {
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
+}
+
+.fib-level-line.extension line,
+.fib-level-line.target line {
+  stroke: rgba(246, 195, 67, 0.42);
+}
+
+.fib-level-line text {
+  fill: rgba(226, 232, 240, 0.82);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.fib-level-line.extension text,
+.fib-level-line.target text {
+  fill: #ffe08a;
+}
+
 .chart-hover line {
   stroke: rgba(255, 255, 255, 0.38);
   stroke-width: 1;
@@ -1638,6 +1831,7 @@ textarea:focus {
   .catalog-stack,
   .signals-hero,
   .alert-rules-grid,
+  .signal-research-panel,
   .form-row {
     grid-template-columns: 1fr;
   }
@@ -1669,6 +1863,7 @@ textarea:focus {
   .kpi-grid,
   .market-strip,
   .insight-grid,
+  .signal-research-panel,
   .signals-score-grid,
   .signal-history-grid,
   .filter-card,

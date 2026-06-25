@@ -4,7 +4,7 @@ import { Badge } from "@ui/Badge.jsx";
 import { Button } from "@ui/Button.jsx";
 import { Card, CardTitle } from "@ui/Card.jsx";
 import { ageLabel, fmtNumber, fmtPct, fmtUsd, signalLabel, targetLabel } from "@shared/formatters.js";
-import { alertTypeLabel } from "@shared/signalEngine.js";
+import { alertTypeLabel, computeDynamicFibPlan } from "@shared/signalEngine.js";
 import {
   getAnalysis,
   getHealth,
@@ -404,11 +404,20 @@ function SignalsPage({ rows, onChange }) {
   const [tab, setTab] = React.useState("active");
   const sortedRows = React.useMemo(() => [...rows].sort((a, b) => (b.signalDetail?.score || 0) - (a.signalDetail?.score || 0)), [rows]);
   const activeAlerts = state.triggeredAlerts.filter((alert) => !alert.acknowledged);
+  const [notificationPermission, setNotificationPermission] = React.useState(typeof Notification === "undefined" ? "unsupported" : Notification.permission);
   const signalCounts = {
     buy: rows.filter((row) => ["strong_buy", "buy"].includes(row.technicalSignal)).length,
     watch: rows.filter((row) => row.technicalSignal === "watch").length,
     risky: rows.filter((row) => ["risky", "sell", "strong_sell"].includes(row.technicalSignal)).length,
-    alerts: activeAlerts.length
+    alerts: activeAlerts.length,
+    macdCross: rows.filter((row) => ["bullish", "bearish"].includes(row.signalDetail?.indicators?.macdCross)).length,
+    volumeSpike: rows.filter((row) => Number(row.signalDetail?.indicators?.volumeSpikeRatio) >= 1.8).length,
+    fibConfidence: rows.filter((row) => Number(row.signalDetail?.fibPlan?.confidence) >= 70).length
+  };
+  const requestNotifications = async () => {
+    if (typeof Notification === "undefined") return setNotificationPermission("unsupported");
+    const next = await Notification.requestPermission();
+    setNotificationPermission(next);
   };
 
   return (
@@ -418,6 +427,12 @@ function SignalsPage({ rows, onChange }) {
           <p className="eyebrow">Sinyal merkezi</p>
           <h2>Teknik analiz, haber etkisi ve alarm motoru</h2>
           <small>Bu alan analiz ve izleme amaçlıdır; yatırım tavsiyesi değildir.</small>
+          <div className="signal-hero-actions">
+            <Button type="button" variant={notificationPermission === "granted" ? "secondary" : "primary"} onClick={requestNotifications}>
+              {notificationPermission === "granted" ? "Bildirim açık" : notificationPermission === "denied" ? "Bildirim engelli" : "Bildirimleri aç"}
+            </Button>
+            <span>{activeAlerts.length ? `${activeAlerts.length} okunmamış alarm` : "Alarm kuyruğu temiz"}</span>
+          </div>
         </div>
         <div className="signals-score-grid">
           <Metric label="Al/Güçlü Al" value={signalCounts.buy} />
@@ -426,6 +441,7 @@ function SignalsPage({ rows, onChange }) {
           <Metric label="Aktif alarm" value={signalCounts.alerts} tone={signalCounts.alerts ? "down" : ""} />
         </div>
       </div>
+      <SignalResearchPanel rows={rows} stats={signalCounts} />
       <div className="signal-tabs">
         {SIGNAL_TABS.map(([id, label]) => (
           <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>{label}</button>
@@ -439,6 +455,44 @@ function SignalsPage({ rows, onChange }) {
   );
 }
 
+function SignalResearchPanel({ rows, stats }) {
+  const strongest = [...rows].filter((row) => Number.isFinite(row.signalDetail?.score)).sort((a, b) => (b.signalDetail?.score || 0) - (a.signalDetail?.score || 0)).slice(0, 4);
+  const warning = [...rows].filter((row) => ["risky", "sell", "strong_sell"].includes(row.technicalSignal)).sort((a, b) => (b.signalDetail?.riskScore || 0) - (a.signalDetail?.riskScore || 0)).slice(0, 4);
+  const fibWatch = [...rows].filter((row) => Number.isFinite(row.signalDetail?.fibPlan?.confidence)).sort((a, b) => (b.signalDetail?.fibPlan?.confidence || 0) - (a.signalDetail?.fibPlan?.confidence || 0)).slice(0, 4);
+  return (
+    <div className="signal-research-panel">
+      <div className="research-card">
+        <span>İndikatör kapsamı</span>
+        <strong>RSI, MACD, MA20/50/150/200, Bollinger, ATR, hacim</strong>
+        <small>{stats.macdCross} MACD kesişimi · {stats.volumeSpike} hacim sıçraması</small>
+      </div>
+      <div className="research-card">
+        <span>Dinamik Fibonacci</span>
+        <strong>1 yıllık pivot swing + retracement/extension</strong>
+        <small>{stats.fibConfidence} hissede Fib güveni yüksek</small>
+      </div>
+      <MiniSignalList title="En güçlü sinyaller" rows={strongest} value={(row) => fmtNumber(row.signalDetail?.score, 0)} />
+      <MiniSignalList title="Risk kontrol" rows={warning} value={(row) => fmtNumber(row.signalDetail?.riskScore, 0)} />
+      <MiniSignalList title="Fib izleme" rows={fibWatch} value={(row) => `${fmtNumber(row.signalDetail?.fibPlan?.confidence, 0)}%`} />
+    </div>
+  );
+}
+
+function MiniSignalList({ title, rows, value }) {
+  return (
+    <div className="research-list">
+      <span>{title}</span>
+      {rows.length ? rows.map((row) => (
+        <div key={row.symbol}>
+          <b>{row.symbol}</b>
+          <small>{signalLabel(row.technicalSignal)}</small>
+          <strong>{value(row)}</strong>
+        </div>
+      )) : <small>Veri hazırlanıyor</small>}
+    </div>
+  );
+}
+
 function SignalTable({ rows, onChange }) {
   return (
     <div className="signal-table-wrap">
@@ -448,6 +502,7 @@ function SignalTable({ rows, onChange }) {
             <th>Hisse</th>
             <th>Fiyat</th>
             <th>Sinyal</th>
+            <th>Tetikleyici</th>
             <th>Skor</th>
             <th>Güven</th>
             <th>Haber</th>
@@ -465,6 +520,7 @@ function SignalTable({ rows, onChange }) {
                 <td><strong>{row.symbol}</strong><small>{row.company}</small></td>
                 <td>{fmtUsd(row.price)}</td>
                 <td><span className={`signal-pill ${signalToneClass(row.technicalSignal)}`}>{signalLabel(row.technicalSignal)}</span></td>
+                <td><TriggerStack row={row} /></td>
                 <td><b>{fmtNumber(signal.score, 0)}</b></td>
                 <td>{fmtNumber(signal.confidence, 0)}%</td>
                 <td><Badge tone={newsTone(row.newsSentiment)}>{newsLabel(row.newsSentiment)}</Badge></td>
@@ -481,6 +537,25 @@ function SignalTable({ rows, onChange }) {
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function TriggerStack({ row }) {
+  const indicators = row.signalDetail?.indicators || {};
+  const fibPlan = row.signalDetail?.fibPlan || {};
+  const triggers = [
+    indicators.macdCross === "bullish" ? ["MACD ↑", "positive"] : null,
+    indicators.macdCross === "bearish" ? ["MACD ↓", "negative"] : null,
+    Number(indicators.volumeSpikeRatio) >= 1.8 ? [`Hacim ${fmtNumber(indicators.volumeSpikeRatio, 1)}x`, "warning"] : null,
+    indicators.bollingerPosition === "upper" ? ["Bollinger üst", "warning"] : null,
+    indicators.bollingerPosition === "lower" ? ["Bollinger alt", "positive"] : null,
+    Number(fibPlan.confidence) >= 70 ? [`Fib ${fmtNumber(fibPlan.confidence, 0)}%`, "neutral"] : null,
+    row.newsImpact === "high" ? ["Haber yüksek", row.newsSentiment === "negative" ? "negative" : "positive"] : null
+  ].filter(Boolean);
+  return (
+    <div className="trigger-stack">
+      {triggers.length ? triggers.slice(0, 4).map(([label, tone]) => <span key={label} className={tone}>{label}</span>) : <small>Standart takip</small>}
     </div>
   );
 }
@@ -894,6 +969,9 @@ function ChartTab({ row, history, onChange }) {
         <Metric label="Fib hedef" value={fmtUsd(row.fibTarget)} />
         <Metric label="Fib uzaklığı" value={fmtPct(row.fibDistancePct)} />
         <Metric label="Hedef durumu" value={targetLabel(row.targetStatus)} />
+        <Metric label="Fib güven" value={`${fmtNumber(row.signalDetail?.fibPlan?.confidence, 0)}%`} />
+        <Metric label="Fib destek" value={fmtUsd(row.signalDetail?.fibPlan?.support?.price)} />
+        <Metric label="Fib direnç" value={fmtUsd(row.signalDetail?.fibPlan?.resistance?.price)} />
         <Metric label="Genel skor" value={`+${row.score}`} />
         <Metric label="Teknik sinyal" value={signalLabel(row.technicalSignal)} />
         <Metric label="Risk" value={riskLabel(row.riskLevel)} />
@@ -914,8 +992,10 @@ function SparkChart({ points, target, signal }) {
   if (values.length < 2) return <div className="chart-empty">Grafik verisi yükleniyor</div>;
   const width = 640;
   const height = 220;
-  const min = Math.min(...values, Number(target) || Infinity);
-  const max = Math.max(...values, Number(target) || -Infinity);
+  const fibLevels = getVisibleFibLevels(signal?.fibPlan, Number(target));
+  const fibPrices = fibLevels.map((level) => Number(level.price)).filter(Number.isFinite);
+  const min = Math.min(...values, ...fibPrices, Number(target) || Infinity);
+  const max = Math.max(...values, ...fibPrices, Number(target) || -Infinity);
   const span = max - min || 1;
   const coords = values.map((value, index) => {
     const x = (index / (values.length - 1)) * width;
@@ -942,6 +1022,15 @@ function SparkChart({ points, target, signal }) {
       </defs>
       <path d={area} fill="url(#chartGlow)" />
       <path d={path} fill="none" stroke="#00d4ff" strokeWidth="3" strokeLinecap="round" />
+      {fibLevels.map((level) => {
+        const y = height - ((Number(level.price) - min) / span) * height;
+        return (
+          <g key={`${level.label}-${level.price}`} className={`fib-level-line ${level.type}`}>
+            <line x1="0" x2={width} y1={y} y2={y} />
+            <text x={width - 116} y={Math.max(14, y - 5)}>{level.label} {fmtUsd(level.price)}</text>
+          </g>
+        );
+      })}
       {signalPoint ? (
         <g className={`signal-chart-marker ${signalToneClass(signal?.signal)}`}>
           <circle cx={signalPoint.x} cy={signalPoint.y} r="7" />
@@ -966,6 +1055,18 @@ function SparkChart({ points, target, signal }) {
       ) : null}
     </svg>
   );
+}
+
+function getVisibleFibLevels(fibPlan, target) {
+  const levels = [
+    fibPlan?.support,
+    fibPlan?.resistance,
+    fibPlan?.activeLevel,
+    Number.isFinite(target) ? { label: "Hedef", price: target, type: "target" } : null
+  ].filter((level) => level && Number.isFinite(Number(level.price)));
+  const unique = new Map();
+  for (const level of levels) unique.set(`${level.label}:${level.price}`, level);
+  return Array.from(unique.values()).slice(0, 4);
 }
 
 function ReturnHeatmap({ returns = [], compact = false, title = "1-12 aylık getiri" }) {
@@ -1050,12 +1151,37 @@ function AnalysisTab({ row }) {
         <Metric label="Analist hedefi" value={fmtUsd(row.analysisTargetPrice)} />
         <Metric label="RSI 14" value={fmtNumber(signal.indicators?.rsi14 ?? row.technicals?.rsi14, 1)} />
         <Metric label="MACD" value={fmtNumber(signal.indicators?.macdHistogram, 2)} />
+        <Metric label="MACD kesişim" value={signal.indicators?.macdCross === "bullish" ? "Yukarı" : signal.indicators?.macdCross === "bearish" ? "Aşağı" : "Yok"} />
+        <Metric label="Bollinger" value={signal.indicators?.bollingerPosition || "middle"} />
+        <Metric label="Hacim" value={Number.isFinite(signal.indicators?.volumeSpikeRatio) ? `${fmtNumber(signal.indicators.volumeSpikeRatio, 1)}x` : "-"} />
+        <Metric label="Fib güven" value={`${fmtNumber(signal.fibPlan?.confidence, 0)}%`} />
         <Metric label="MA20 / MA50" value={`${fmtUsd(signal.indicators?.sma20 ?? row.technicals?.ma20)} / ${fmtUsd(signal.indicators?.sma50 ?? row.technicals?.ma50)}`} />
       </div>
+      <FibLevelGrid fibPlan={signal.fibPlan} />
       <div className="signal-explain">
         {(signal.reasons || []).map((reason) => <span key={reason}>{reason}</span>)}
       </div>
     </Card>
+  );
+}
+
+function FibLevelGrid({ fibPlan }) {
+  const levels = (fibPlan?.levels || []).filter((level) => [0.382, 0.5, 0.618, 0.786, 1, 1.272, 1.618].includes(Number(level.ratio)));
+  if (!levels.length) return <p className="empty">Dinamik Fibonacci için yeterli seviye hazırlanamadı.</p>;
+  return (
+    <div className="fib-level-grid">
+      <div className="fib-level-head">
+        <strong>Dinamik Fibonacci seviyeleri</strong>
+        <span>{fibPlan?.method === "pivot_swing_1y" ? "1Y pivot swing" : "Hazırlanıyor"}</span>
+      </div>
+      {levels.map((level) => (
+        <div key={`${level.label}-${level.price}`} className={level.type}>
+          <span>{level.label}</span>
+          <strong>{fmtUsd(level.price)}</strong>
+          <small>{level.type === "extension" ? "Extension" : "Retracement"}</small>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -1241,8 +1367,8 @@ async function resolveAutoFibTarget(symbol, picked) {
     const [snapshot] = snapshotResult.status === "fulfilled" ? snapshotResult.value : [];
     const price = Number(snapshot?.price);
     const history = historyResult.status === "fulfilled" ? historyResult.value : [];
-    const fibTarget = calculateFibonacciTarget(history, price);
-    if (Number.isFinite(fibTarget) && fibTarget > 0) return fibTarget;
+    const fibPlan = computeDynamicFibPlan(history, price);
+    if (Number.isFinite(fibPlan?.target) && fibPlan.target > 0) return fibPlan.target;
   } catch {
     // Manual input remains available when live price cannot be reached.
   }
