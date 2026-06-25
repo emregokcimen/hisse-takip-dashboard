@@ -1,0 +1,418 @@
+[
+  {
+    "symbol": "IREN",
+    "company": "IREN",
+    "category": "Yapay Zekâ Altyapı Hizmetleri",
+    "categoryDescription": "Yapay zekâ altyapı hizmetleri",
+    "fibTarget": 51,
+    "logo": "https://www.google.com/s2/favicons?domain=iren.com&sz=64"
+  },
+  {
+    "symbol": "NBIS",
+    "company": "Nebius Group",
+    "category": "Yapay Zekâ Altyapı Hizmetleri",
+    "categoryDescription": "Yapay zekâ altyapı hizmetleri",
+    "fibTarget": 177,
+    "logo": "https://www.google.com/s2/favicons?domain=nebius.com&sz=64"
+  },
+  {
+    "symbol": "CIFR",
+    "company": "Cipher Mining",
+    "category": "Yapay Zekâ Altyapı Hizmetleri",
+    "categoryDescription": "Yapay zekâ altyapı hizmetleri",
+    "fibTarget": 17,
+    "logo": "https://www.google.com/s2/favicons?domain=ciphermining.com&sz=64"
+  },
+  {
+    "symbol": "CRWV",
+    "company": "CoreWeave",
+    "category": "Yapay Zekâ Altyapı Hizmetleri",
+    "categoryDescription": "Yapay zekâ altyapı hizmetleri",
+    "fibTarget": 100,
+    "logo": "https://www.google.com/s2/favicons?domain=coreweave.com&sz=64"
+  },
+  {
+    "symbol": "EOSE",
+    "company": "Eos Energy",
+    "category": "Yapay Zekâ Enerji ve Güç Sistemleri",
+    "categoryDescription": "Yapay zekâ enerji ve güç sistemleri",
+    "fibTarget": 7,
+    "logo": "https://www.google.com/s2/favicons?domain=eose.com&sz=64"
+  },
+  {
+    "symbol": "BE",
+    "company": "Bloom Energy",
+    "category": "Yapay Zekâ Enerji ve Güç Sistemleri",
+    "categoryDescription": "Yapay zekâ enerji ve güç sistemleri",
+    "fibTarget": 237,
+    "logo": "https://www.google.com/s2/favicons?domain=bloomenergy.com&sz=64"
+  },
+  {
+    "symbol": "NVTS",
+    "company": "Navitas Semiconductor",
+    "category": "Yapay Zekâ Enerji ve Güç Sistemleri",
+    "categoryDescription": "Yapay zekâ enerji ve güç sistemleri",
+    "fibTarget": 22,
+    "logo": "https://www.google.com/s2/favicons?domain=navitassemi.com&sz=64"
+  },
+  {
+    "symbol": "VRT",
+    "company": "Vertiv",
+    "category": "Yapay Zekâ Enerji ve Güç Sistemleri",
+    "categoryDescription": "Yapay zekâ enerji ve güç sistemleri",
+    "fibTarget": 282,
+    "logo": "https://www.google.com/s2/favicons?domain=vertiv.com&sz=64"
+  },
+  {
+    "symbol": "NVDA",
+    "company": "NVIDIA",
+    "category": "Yapay Zekâ Donanımı",
+    "categoryDescription": "Yapay zekâ donanımı",
+    "fibTarget": 192,
+    "logo": "https://www.google.com/s2/favicons?domain=nvidia.com&sz=64"
+  },
+  {
+    "symbol": "TSM",
+    "company": "TSMC",
+    "category": "Yapay Zekâ Donanımı",
+    "categoryDescription": "Yapay zekâ donanımı",
+    "fibTarget": 408,
+    "logo": "https://www.google.com/s2/favicons?domain=tsmc.com&sz=64"
+  },
+  {
+    "symbol": "ASML",
+    "company": "ASML",
+    "category": "Yapay Zekâ Donanımı",
+    "categoryDescription": "Yapay zekâ donanımı",
+    "fibTarget": 1618,
+    "logo": "https://www.google.com/s2/favicons?domain=asml.com&sz=64"
+  },
+  {
+    "symbol": "MU",
+    "company": "Micron Technology",
+    "category": "Yapay Zekâ Donanımı",
+    "categoryDescription": "Yapay zekâ donanımı",
+    "fibTarget": 730,
+    "logo": "https://www.google.com/s2/favicons?domain=micron.com&sz=64"
+  },
+  {
+    "symbol": "PLTR",
+    "company": "Palantir",
+    "category": "Yapay Zekâ Yazılım ve Uygulamaları",
+    "categoryDescription": "Yapay zekâ yazılım ve uygulamaları",
+    "fibTarget": 129,
+    "logo": "https://www.google.com/s2/favicons?domain=palantir.com&sz=64"
+  },
+  {
+    "symbol": "NOW",
+    "company": "ServiceNow",
+    "category": "Yapay Zekâ Yazılım ve Uygulamaları",
+    "categoryDescription": "Yapay zekâ yazılım ve uygulamaları",
+    "fibTarget": 109,
+    "logo": "https://www.google.com/s2/favicons?domain=servicenow.com&sz=64"
+  },
+  {
+    "symbol": "CRWD",
+    "company": "CrowdStrike",
+    "category": "Yapay Zekâ Yazılım ve Uygulamaları",
+    "categoryDescription": "Yapay zekâ yazılım ve uygulamaları",
+    "fibTarget": 598,
+    "logo": "https://www.google.com/s2/favicons?domain=crowdstrike.com&sz=64"
+  },
+  {
+    "symbol": "SNOW",
+    "company": "Snowflake",
+    "category": "Yapay Zekâ Yazılım ve Uygulamaları",
+    "categoryDescription": "Yapay zekâ yazılım ve uygulamaları",
+    "fibTarget": 181,
+    "logo": "https://www.google.com/s2/favicons?domain=snowflake.com&sz=64"
+  },
+  {
+    "symbol": "AVGO",
+    "company": "Broadcom",
+    "category": "Yapay Zekâ Bağlantı ve Veri İletişimi",
+    "categoryDescription": "Yapay zekâ bağlantı ve veri iletişimi",
+    "fibTarget": 377,
+    "logo": "https://www.google.com/s2/favicons?domain=broadcom.com&sz=64"
+  },
+  {
+    "symbol": "ALAB",
+    "company": "Astera Labs",
+    "category": "Yapay Zekâ Bağlantı ve Veri İletişimi",
+    "categoryDescription": "Yapay zekâ bağlantı ve veri iletişimi",
+    "fibTarget": 305,
+    "logo": "https://www.google.com/s2/favicons?domain=asteralabs.com&sz=64"
+  },
+  {
+    "symbol": "CRDO",
+    "company": "Credo Technology",
+    "category": "Yapay Zekâ Bağlantı ve Veri İletişimi",
+    "categoryDescription": "Yapay zekâ bağlantı ve veri iletişimi",
+    "fibTarget": 195,
+    "logo": "https://www.google.com/s2/favicons?domain=credosemi.com&sz=64"
+  },
+  {
+    "symbol": "MRVL",
+    "company": "Marvell Technology",
+    "category": "Yapay Zekâ Bağlantı ve Veri İletişimi",
+    "categoryDescription": "Yapay zekâ bağlantı ve veri iletişimi",
+    "fibTarget": 236,
+    "logo": "https://www.google.com/s2/favicons?domain=marvell.com&sz=64"
+  },
+  {
+    "symbol": "RKLB",
+    "company": "Rocket Lab",
+    "category": "Uzay Teknolojileri",
+    "categoryDescription": "Uzay teknolojileri",
+    "fibTarget": 106,
+    "logo": "https://www.google.com/s2/favicons?domain=rocketlabusa.com&sz=64"
+  },
+  {
+    "symbol": "ASTS",
+    "company": "AST SpaceMobile",
+    "category": "Uzay Teknolojileri",
+    "categoryDescription": "Uzay teknolojileri",
+    "fibTarget": 89,
+    "logo": "https://www.google.com/s2/favicons?domain=ast-science.com&sz=64"
+  },
+  {
+    "symbol": "PL",
+    "company": "Planet Labs",
+    "category": "Uzay Teknolojileri",
+    "categoryDescription": "Uzay teknolojileri",
+    "fibTarget": 31,
+    "logo": "https://www.google.com/s2/favicons?domain=planet.com&sz=64"
+  },
+  {
+    "symbol": "BKSY",
+    "company": "BlackSky",
+    "category": "Uzay Teknolojileri",
+    "categoryDescription": "Uzay teknolojileri",
+    "fibTarget": 32,
+    "logo": "https://www.google.com/s2/favicons?domain=blacksky.com&sz=64"
+  },
+  {
+    "symbol": "IONQ",
+    "company": "IonQ",
+    "category": "Kuantum Bilişim",
+    "categoryDescription": "Kuantum bilişim",
+    "fibTarget": 52,
+    "logo": "https://www.google.com/s2/favicons?domain=ionq.com&sz=64"
+  },
+  {
+    "symbol": "RGTI",
+    "company": "Rigetti Computing",
+    "category": "Kuantum Bilişim",
+    "categoryDescription": "Kuantum bilişim",
+    "fibTarget": 15,
+    "logo": "https://www.google.com/s2/favicons?domain=rigetti.com&sz=64"
+  },
+  {
+    "symbol": "QBTS",
+    "company": "D-Wave Quantum",
+    "category": "Kuantum Bilişim",
+    "categoryDescription": "Kuantum bilişim",
+    "fibTarget": 20,
+    "logo": "https://www.google.com/s2/favicons?domain=dwavesys.com&sz=64"
+  },
+  {
+    "symbol": "INFQ",
+    "company": "Infleqtion",
+    "category": "Kuantum Bilişim",
+    "categoryDescription": "Kuantum bilişim",
+    "fibTarget": 13,
+    "logo": "https://www.google.com/s2/favicons?domain=infleqtion.com&sz=64"
+  },
+  {
+    "symbol": "ONDS",
+    "company": "Ondas Holdings",
+    "category": "Drone Teknolojileri",
+    "categoryDescription": "Insansiz hava araclari",
+    "fibTarget": 10,
+    "logo": "https://www.google.com/s2/favicons?domain=ondasholdings.com&sz=64"
+  },
+  {
+    "symbol": "AVAV",
+    "company": "AeroVironment",
+    "category": "Drone Teknolojileri",
+    "categoryDescription": "Insansiz hava araclari",
+    "fibTarget": 175,
+    "logo": "https://www.google.com/s2/favicons?domain=avinc.com&sz=64"
+  },
+  {
+    "symbol": "KTOS",
+    "company": "Kratos Defense",
+    "category": "Drone Teknolojileri",
+    "categoryDescription": "Insansiz hava araclari",
+    "fibTarget": 52,
+    "logo": "https://www.google.com/s2/favicons?domain=kratosdefense.com&sz=64"
+  },
+  {
+    "symbol": "UMAC",
+    "company": "Unusual Machines",
+    "category": "Drone Teknolojileri",
+    "categoryDescription": "Insansiz hava araclari",
+    "fibTarget": 24,
+    "logo": "https://www.google.com/s2/favicons?domain=unusualmachines.com&sz=64"
+  },
+  {
+    "symbol": "OKLO",
+    "company": "Oklo",
+    "category": "Nükleer Enerji",
+    "categoryDescription": "Nükleer enerji",
+    "fibTarget": 50,
+    "logo": "https://www.google.com/s2/favicons?domain=oklo.com&sz=64"
+  },
+  {
+    "symbol": "UUUU",
+    "company": "Energy Fuels",
+    "category": "Nükleer Enerji",
+    "categoryDescription": "Nükleer enerji",
+    "fibTarget": 12,
+    "logo": "https://www.google.com/s2/favicons?domain=energyfuels.com&sz=64"
+  },
+  {
+    "symbol": "GEV",
+    "company": "GE Vernova",
+    "category": "Nükleer Enerji",
+    "categoryDescription": "Nükleer enerji",
+    "fibTarget": 906,
+    "logo": "https://www.google.com/s2/favicons?domain=gevernova.com&sz=64"
+  },
+  {
+    "symbol": "LEU",
+    "company": "Centrus Energy",
+    "category": "Nükleer Enerji",
+    "categoryDescription": "Nükleer enerji",
+    "fibTarget": 151,
+    "logo": "https://www.google.com/s2/favicons?domain=centrusenergy.com&sz=64"
+  },
+  {
+    "symbol": "AAOI",
+    "company": "Applied Optoelectronics",
+    "category": "Fotonik ve Optik Teknolojiler",
+    "categoryDescription": "Fotonik ve optik teknolojiler",
+    "fibTarget": 164,
+    "logo": "https://www.google.com/s2/favicons?domain=ao-inc.com&sz=64"
+  },
+  {
+    "symbol": "LITE",
+    "company": "Lumentum",
+    "category": "Fotonik ve Optik Teknolojiler",
+    "categoryDescription": "Fotonik ve optik teknolojiler",
+    "fibTarget": 698,
+    "logo": "https://www.google.com/s2/favicons?domain=lumentum.com&sz=64"
+  },
+  {
+    "symbol": "COHR",
+    "company": "Coherent",
+    "category": "Fotonik ve Optik Teknolojiler",
+    "categoryDescription": "Fotonik ve optik teknolojiler",
+    "fibTarget": 283,
+    "logo": "https://www.google.com/s2/favicons?domain=coherent.com&sz=64"
+  },
+  {
+    "symbol": "AEHR",
+    "company": "Aehr Test Systems",
+    "category": "Fotonik ve Optik Teknolojiler",
+    "categoryDescription": "Fotonik ve optik teknolojiler",
+    "fibTarget": 76,
+    "logo": "https://www.google.com/s2/favicons?domain=aehr.com&sz=64"
+  },
+  {
+    "symbol": "AMD",
+    "company": "AMD",
+    "category": "CPU Darboğazı Çözümleri",
+    "categoryDescription": "İşlemci darboğazı çözümleri",
+    "fibTarget": 383,
+    "logo": "https://www.google.com/s2/favicons?domain=amd.com&sz=64"
+  },
+  {
+    "symbol": "INTC",
+    "company": "Intel",
+    "category": "CPU Darboğazı Çözümleri",
+    "categoryDescription": "İşlemci darboğazı çözümleri",
+    "fibTarget": 91,
+    "logo": "https://www.google.com/s2/favicons?domain=intel.com&sz=64"
+  },
+  {
+    "symbol": "ARM",
+    "company": "Arm Holdings",
+    "category": "CPU Darboğazı Çözümleri",
+    "categoryDescription": "İşlemci darboğazı çözümleri",
+    "fibTarget": 299,
+    "logo": "https://www.google.com/s2/favicons?domain=arm.com&sz=64"
+  },
+  {
+    "symbol": "AMKR",
+    "company": "Amkor Technology",
+    "category": "CPU Darboğazı Çözümleri",
+    "categoryDescription": "İşlemci darboğazı çözümleri",
+    "fibTarget": 57,
+    "logo": "https://www.google.com/s2/favicons?domain=amkor.com&sz=64"
+  },
+  {
+    "symbol": "TSLA",
+    "company": "Tesla",
+    "category": "Fiziksel Yapay Zekâ ve Robotik",
+    "categoryDescription": "Fiziksel yapay zekâ ve robotik",
+    "fibTarget": 382,
+    "logo": "https://www.google.com/s2/favicons?domain=tesla.com&sz=64"
+  },
+  {
+    "symbol": "AMZN",
+    "company": "Amazon",
+    "category": "Fiziksel Yapay Zekâ ve Robotik",
+    "categoryDescription": "Fiziksel yapay zekâ ve robotik",
+    "fibTarget": 230,
+    "logo": "https://www.google.com/s2/favicons?domain=amazon.com&sz=64"
+  },
+  {
+    "symbol": "GOOGL",
+    "company": "Alphabet",
+    "category": "Fiziksel Yapay Zekâ ve Robotik",
+    "categoryDescription": "Fiziksel yapay zekâ ve robotik",
+    "fibTarget": 357,
+    "logo": "https://www.google.com/s2/favicons?domain=abc.xyz&sz=64"
+  },
+  {
+    "symbol": "ISRG",
+    "company": "Intuitive Surgical",
+    "category": "Fiziksel Yapay Zekâ ve Robotik",
+    "categoryDescription": "Fiziksel yapay zekâ ve robotik",
+    "fibTarget": 394,
+    "logo": "https://www.google.com/s2/favicons?domain=intuitive.com&sz=64"
+  },
+  {
+    "symbol": "SNDK",
+    "company": "Sandisk",
+    "category": "NAND Depolama ve Veri Saklama",
+    "categoryDescription": "NAND flash, disk ve kurumsal depolama",
+    "fibTarget": 1226,
+    "logo": "https://www.google.com/s2/favicons?domain=sandisk.com&sz=64"
+  },
+  {
+    "symbol": "WDC",
+    "company": "Western Digital",
+    "category": "NAND Depolama ve Veri Saklama",
+    "categoryDescription": "NAND flash, disk ve kurumsal depolama",
+    "fibTarget": 402,
+    "logo": "https://www.google.com/s2/favicons?domain=westerndigital.com&sz=64"
+  },
+  {
+    "symbol": "STX",
+    "company": "Seagate Technology",
+    "category": "NAND Depolama ve Veri Saklama",
+    "categoryDescription": "NAND flash, disk ve kurumsal depolama",
+    "fibTarget": 666,
+    "logo": "https://www.google.com/s2/favicons?domain=seagate.com&sz=64"
+  },
+  {
+    "symbol": "NTAP",
+    "company": "NetApp",
+    "category": "NAND Depolama ve Veri Saklama",
+    "categoryDescription": "NAND flash, disk ve kurumsal depolama",
+    "fibTarget": 131,
+    "logo": "https://www.google.com/s2/favicons?domain=netapp.com&sz=64"
+  }
+]

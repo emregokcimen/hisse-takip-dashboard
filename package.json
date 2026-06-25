@@ -1,0 +1,28 @@
+{
+  "name": "hisse-takip-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "powershell -ExecutionPolicy Bypass -File ./start-dashboard.ps1",
+    "dev": "npm run dev:shell",
+    "dev:shell": "vite --config apps/shell/vite.config.js",
+    "dev:dashboard": "vite --config apps/dashboard/vite.config.js",
+    "dev:all": "powershell -ExecutionPolicy Bypass -File ./start-dashboard.ps1",
+    "proxy": "node fvt-price-proxy.cjs",
+    "build": "npm run build:dashboard && npm run build:shell",
+    "build:shell": "vite build --config apps/shell/vite.config.js",
+    "build:dashboard": "vite build --config apps/dashboard/vite.config.js",
+    "preview": "vite preview --config apps/shell/vite.config.js",
+    "smoke:http": "node scripts/smoke-http.mjs",
+    "smoke:browser": "node scripts/smoke-browser.mjs",
+    "smoke": "npm run smoke:http && npm run smoke:browser"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}
