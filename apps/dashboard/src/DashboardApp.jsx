@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import "./dashboard.css";
 import { Badge } from "@ui/Badge.jsx";
 import { Button } from "@ui/Button.jsx";
@@ -81,13 +81,19 @@ let refreshInFlight = false;
 
 export default function DashboardApp() {
   const [renderVersion, forceRender] = React.useReducer((value) => value + 1, 0);
+  const [route, setRoute] = React.useState(getRoute());
   const rerender = React.useCallback(() => forceRender(), []);
 
   React.useEffect(() => {
     applyTheme();
     bootstrap(rerender);
     const timer = window.setInterval(() => refreshAll(rerender), REFRESH_MS);
-    return () => window.clearInterval(timer);
+    const onHashChange = () => setRoute(getRoute());
+    window.addEventListener("hashchange", onHashChange);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("hashchange", onHashChange);
+    };
   }, [rerender]);
 
   const rows = React.useMemo(() => getVisibleRows(), [renderVersion]);
@@ -106,26 +112,42 @@ export default function DashboardApp() {
 
   return (
     <div className="mfe-app">
-      <Sidebar />
+      <Sidebar route={route} />
       <main className="mfe-main">
         <Topbar onRefresh={() => refreshAll(rerender, { manual: true })} />
-        <MarketStrip kpis={kpis} />
-        <KpiGrid kpis={kpis} />
-        <InsightGrid kpis={kpis} onChange={rerender} />
-        <SignalsPage rows={rows} onChange={rerender} />
-        <FilterToolbar onChange={rerender} />
-        <div className="workspace-grid">
-          <section className="workspace-left">
-            <CatalogManager onChange={rerender} />
-            <StockTable rows={rows} selected={selected} onChange={rerender} />
-            <StockCardList rows={rows} selected={selected} onChange={rerender} />
-          </section>
-          <StockDetailPanel row={selected} onChange={rerender} />
-        </div>
+        {route === "signals" ? (
+          <>
+            <MarketStrip kpis={kpis} />
+            <SignalsPage rows={rows} onChange={rerender} />
+            <div className="signals-workspace">
+              <StockDetailPanel row={selected} onChange={rerender} />
+            </div>
+          </>
+        ) : (
+          <>
+            <MarketStrip kpis={kpis} />
+            <KpiGrid kpis={kpis} />
+            <InsightGrid kpis={kpis} onChange={rerender} />
+            <FilterToolbar onChange={rerender} />
+            <div className="workspace-grid">
+              <section className="workspace-left">
+                <CatalogManager onChange={rerender} />
+                <StockTable rows={rows} selected={selected} onChange={rerender} />
+                <StockCardList rows={rows} selected={selected} onChange={rerender} />
+              </section>
+              <StockDetailPanel row={selected} onChange={rerender} />
+            </div>
+          </>
+        )}
       </main>
       <div id="alertStack" className="toast-stack" />
     </div>
   );
+}
+
+function getRoute() {
+  const hash = String(window.location.hash || "#dashboard").replace("#", "");
+  return hash === "signals" ? "signals" : "dashboard";
 }
 
 async function bootstrap(rerender) {
@@ -269,13 +291,13 @@ function showTriggeredAlerts(alerts = []) {
   }
 }
 
-function Sidebar() {
+function Sidebar({ route }) {
   return (
     <aside className="mfe-sidebar">
       <div className="brand-mark">FVT</div>
       <nav>
-        <a href="#dashboard" className="active">Dashboard</a>
-        <a href="#signals">Sinyaller</a>
+        <a href="#dashboard" className={route === "dashboard" ? "active" : ""}>Dashboard</a>
+        <a href="#signals" className={route === "signals" ? "active" : ""}>Sinyaller</a>
         <a href="#catalog">Katalog</a>
         <a href="#news">Haberler</a>
       </nav>

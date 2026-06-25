@@ -1,4 +1,4 @@
-﻿import { spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -37,8 +37,9 @@ try {
   assert(desktop.visibleCards === 0, "desktop mobil kartlar görünmemeli");
   assert(desktop.desktopHeatmaps >= 52, `desktop heatmap bekleniyordu, gelen ${desktop.desktopHeatmaps}`);
   assert(desktop.signalStrips >= 52, `desktop sinyal şeridi bekleniyordu, gelen ${desktop.signalStrips}`);
-  assert(desktop.signalsCenterVisible, "desktop sinyal merkezi görünmedi");
-  assert(desktop.signalRows >= 52, `desktop sinyal merkezi satır bekleniyordu, gelen ${desktop.signalRows}`);
+  assert(!desktop.signalsCenterVisible, "desktop dashboard içinde sinyal merkezi görünmemeli");
+  assert(desktop.signalsRouteVisible, "desktop #signals sayfasında sinyal merkezi görünmedi");
+  assert(desktop.signalRows >= 52, `desktop #signals satır bekleniyordu, gelen ${desktop.signalRows}`);
   assert(desktop.nasdaqCategoryVisible, "desktop Nasdaq seçim listesinde kategori görünmedi");
   assert(desktop.searchableSelectVisible, "desktop standart select arama kutusu görünmedi");
   assert(desktop.searchableSelectClosed, "desktop standart select dış tıklamayla kapanmadı");
@@ -50,7 +51,7 @@ try {
   assert(tablet.tableDisplay === "none", "750px tablo gizlenmeli");
   assert(tablet.visibleCards >= 52, `750px en az 52 mobil kart bekleniyordu, gelen ${tablet.visibleCards}`);
   assert(tablet.mobileHeatmaps >= 52, `750px mobil heatmap bekleniyordu, gelen ${tablet.mobileHeatmaps}`);
-  assert(tablet.signalsCenterVisible, "750px sinyal merkezi görünmedi");
+  assert(tablet.signalsRouteVisible, "750px #signals sinyal merkezi görünmedi");
   assert(tablet.scrollWidth === tablet.clientWidth, "750px yatay taşma var");
 
   console.log("ok - browser desktop");
@@ -207,8 +208,17 @@ async function runViewportSmoke(cdp, width, height) {
     clientWidth: document.documentElement.clientWidth
   }))()`;
   const result = await cdp.send("Runtime.evaluate", { expression, returnByValue: true }, sessionId);
+  await cdp.send("Page.navigate", { url: APP_URL + "#signals" }, sessionId);
+  await waitForSignalsReady(cdp, sessionId);
+  const signalsResult = await cdp.send("Runtime.evaluate", {
+    expression: `(() => ({
+      signalsRouteVisible: Boolean(document.querySelector(".signals-center")),
+      signalRows: document.querySelectorAll(".signal-table tbody tr").length
+    }))()`,
+    returnByValue: true
+  }, sessionId);
   await cdp.send("Target.closeTarget", { targetId: target.targetId });
-  return result.result.value;
+  return { ...result.result.value, ...signalsResult.result.value };
 }
 
 function assertNoBrowserErrors(events, label) {
@@ -233,6 +243,22 @@ async function waitForPageReady(cdp, sessionId) {
     await delay(250);
   }
   throw new Error("Dashboard browser smoke için hazır olmadı.");
+}
+
+async function waitForSignalsReady(cdp, sessionId) {
+  const deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
+    const result = await cdp.send("Runtime.evaluate", {
+      expression: `Boolean(document.querySelector(".signals-center")) && document.querySelectorAll(".signal-table tbody tr").length >= 1`,
+      returnByValue: true
+    }, sessionId);
+    if (result.result.value) {
+      await delay(500);
+      return;
+    }
+    await delay(250);
+  }
+  throw new Error("Sinyaller sayfası browser smoke için hazır olmadı.");
 }
 
 function assert(condition, message) {

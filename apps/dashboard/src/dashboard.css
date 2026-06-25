@@ -830,6 +830,15 @@ textarea:focus {
   min-width: 0;
 }
 
+.signals-workspace {
+  margin-top: 16px;
+}
+
+.signals-workspace .detail-panel {
+  position: static;
+  max-height: none;
+}
+
 .table-card {
   min-width: 0;
 }

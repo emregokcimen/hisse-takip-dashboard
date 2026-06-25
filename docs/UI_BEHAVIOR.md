@@ -1,10 +1,12 @@
-﻿# UI Behavior
+# UI Behavior
 
 ## Dashboard Alanları
 
 - Topbar: canlı proxy durumu, son yenileme saati ve manuel yenileme butonu.
 - Piyasa özeti: Fib'e en yakın hisseler, güçlü 12A hisseler, pozitif haber ve yüksek risk özetleri.
 - KPI grid: görünen hisse, Fib'e yakın, canlı veri, haber pozitif, risk yüksek, 12A pozitif sayıları.
+- `#dashboard`: ana izleme dashboardudur; sinyal merkezi bu sayfaya gömülmez.
+- `#signals`: aktif sinyaller, alarm kuralları, tetiklenen alarmlar ve sinyal geçmişi için ayrı sayfadır.
 - Filtre paneli: arama, kategori, durum, sıralama, getiri periyodu, hedef filtresi, sinyal filtresi, uyarı eşiği, Fib'e yakın ve favoriler.
 - Filtre panelindeki ve form alanlarındaki dropdownlar native select yerine Metronic benzeri custom select bileşeniyle gösterilir.
 - Ortak `SelectField` kullanılan tüm dropdownlarda yazıyla arama kutusu bulunur; kategori, durum, sıralama, periyot, hedef, sinyal, pozisyon etiketi ve katalog kategori seçimi aynı standarttadır.
@@ -68,6 +70,9 @@ Aynı başlığa tekrar tıklanırsa sıralama yönü değişir.
 - Renk yoğunluğu mutlak getiri büyüdükçe artar.
 - Tablo görünümünde heatmap kompakt gösterilir; detay panelinde değer etiketleriyle daha geniş gösterilir.
 - `SignalStrip` teknik sinyal, haber etkisi, hedef durumu ve risk etiketlerini birlikte gösterir.
+- Gelişmiş sinyal listesi ve alarm motoru yalnızca `#signals` sayfasında gösterilir.
+- Sinyal satırına tıklanınca seçili hisse detay paneli grafik sekmesine geçer ve sinyal marker'ı grafikte görünür.
+- Alarm kuralları ve tetiklenen alarm geçmişi localStorage'da saklanır.
 
 ## Detay Paneli
 
