@@ -1,7 +1,7 @@
 {
-  "savedAt": 1782417530612,
+  "savedAt": 1782568955878,
   "source": "NasdaqTrader",
-  "count": 5523,
+  "count": 5526,
   "data": [
     {
       "symbol": "AAAP",
@@ -43614,6 +43614,20 @@
       "aliases": []
     },
     {
+      "symbol": "MFPVV",
+      "company": "Midera Food Processing, Inc.",
+      "exchange": "NASDAQ",
+      "category": "Tüketici ve E-Ticaret",
+      "categoryDescription": "Tüketici ve E-Ticaret",
+      "marketCategory": "Q",
+      "isEtf": false,
+      "isTest": false,
+      "autoFibTarget": null,
+      "logo": "https://www.google.com/s2/favicons?domain=midera.com&sz=256",
+      "domain": "midera.com",
+      "aliases": []
+    },
+    {
       "symbol": "MFVL",
       "company": "Motley Fool Value Factor ETF",
       "exchange": "NASDAQ",
@@ -43798,6 +43812,20 @@
     {
       "symbol": "MIDD",
       "company": "The Middleby Corporation",
+      "exchange": "NASDAQ",
+      "category": "Diğer Nasdaq Hisseleri",
+      "categoryDescription": "Diğer Nasdaq Hisseleri",
+      "marketCategory": "Q",
+      "isEtf": false,
+      "isTest": false,
+      "autoFibTarget": null,
+      "logo": "https://www.google.com/s2/favicons?domain=middleby.com&sz=256",
+      "domain": "middleby.com",
+      "aliases": []
+    },
+    {
+      "symbol": "MIDDV",
+      "company": "Middleby Corp.",
       "exchange": "NASDAQ",
       "category": "Diğer Nasdaq Hisseleri",
       "categoryDescription": "Diğer Nasdaq Hisseleri",
@@ -61422,20 +61450,6 @@
       "aliases": []
     },
     {
-      "symbol": "SDM",
-      "company": "Smart Digital Group Limited -",
-      "exchange": "NASDAQ",
-      "category": "ETF ve Fonlar",
-      "categoryDescription": "ETF ve Fonlar",
-      "marketCategory": "S",
-      "isEtf": false,
-      "isTest": false,
-      "autoFibTarget": null,
-      "logo": "https://www.google.com/s2/favicons?domain=smart.com&sz=256",
-      "domain": "smart.com",
-      "aliases": []
-    },
-    {
       "symbol": "SDOT",
       "company": "Sadot Group Inc.",
       "exchange": "NASDAQ",
@@ -71115,6 +71129,34 @@
       "aliases": []
     },
     {
+      "symbol": "USDE",
+      "company": "StablecoinX Inc.",
+      "exchange": "NASDAQ",
+      "category": "Diğer Nasdaq Hisseleri",
+      "categoryDescription": "Diğer Nasdaq Hisseleri",
+      "marketCategory": "S",
+      "isEtf": false,
+      "isTest": false,
+      "autoFibTarget": null,
+      "logo": "https://www.google.com/s2/favicons?domain=stablecoinx.com&sz=256",
+      "domain": "stablecoinx.com",
+      "aliases": []
+    },
+    {
+      "symbol": "USDEW",
+      "company": "StablecoinX Inc. - Warrants",
+      "exchange": "NASDAQ",
+      "category": "SPAC ve Birleşme Şirketleri",
+      "categoryDescription": "SPAC ve Birleşme Şirketleri",
+      "marketCategory": "S",
+      "isEtf": false,
+      "isTest": false,
+      "autoFibTarget": null,
+      "logo": "https://www.google.com/s2/favicons?domain=stablecoinx.com&sz=256",
+      "domain": "stablecoinx.com",
+      "aliases": []
+    },
+    {
       "symbol": "USDX",
       "company": "SGI Enhanced Core ETF",
       "exchange": "NASDAQ",
@@ -72530,7 +72572,7 @@
     },
     {
       "symbol": "VIVO",
-      "company": "VivoPower PLC -",
+      "company": "VivoPower PLC",
       "exchange": "NASDAQ",
       "category": "ETF ve Fonlar",
       "categoryDescription": "ETF ve Fonlar",

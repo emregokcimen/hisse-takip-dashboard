@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "setup": "powershell -ExecutionPolicy Bypass -File ./setup-dashboard.ps1",
     "start": "powershell -ExecutionPolicy Bypass -File ./start-dashboard.ps1",
     "dev": "npm run dev:shell",
     "dev:shell": "vite --config apps/shell/vite.config.js",
@@ -16,7 +17,8 @@
     "preview": "vite preview --config apps/shell/vite.config.js",
     "smoke:http": "node scripts/smoke-http.mjs",
     "smoke:browser": "node scripts/smoke-browser.mjs",
-    "smoke": "npm run smoke:http && npm run smoke:browser"
+    "smoke:palette": "node scripts/smoke-command-palette.mjs",
+    "smoke": "npm run smoke:http && npm run smoke:browser && npm run smoke:palette"
   },
   "dependencies": {
     "react": "^19.0.0",

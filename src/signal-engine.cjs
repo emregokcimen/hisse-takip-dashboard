@@ -80,7 +80,7 @@ function computeSignal(input = {}) {
     raw -= 4;
     reasons.push(`Fiyat Fib hedef üstünde ${round(Math.abs(targetDistancePct), 2)}%`);
   }
-  if (fibPlan?.activeLevel?.type === "extension" && fibPlan.target === fibPlan.activeLevel.price) {
+  if (fibPlan.activeLevel.type === "extension" && fibPlan.target === fibPlan.activeLevel.price) {
     raw += 4;
     reasons.push(`Dinamik Fib hedefi ${fibPlan.activeLevel.label} extension`);
   }
@@ -246,14 +246,14 @@ function evaluateAlarmRule(rule = {}, context = {}) {
   const make = (message, severity = "info") => ({ id: `${keyBase}:${type}`, ruleId: rule.id, symbol: row.symbol, type, title: rule.name || alertTypeLabel(type), message, severity, createdAt: Date.now() });
   if (type === "target_near" && Number.isFinite(row.targetDistancePct) && Math.abs(row.targetDistancePct) <= (threshold ?? 1)) return make(`${row.symbol} Fib hedefe ${round(Math.abs(row.targetDistancePct), 2)}% uzaklıkta.`, "warning");
   if (type === "fib_breakout" && row.targetStatus === "above") return make(`${row.symbol} Fib hedef seviyesinin üstünde işlem görüyor.`, "success");
-  if (type === "rsi_extreme" && Number.isFinite(signal.indicators?.rsi14) && (signal.indicators.rsi14 <= (threshold ?? 30) || signal.indicators.rsi14 >= 70)) return make(`${row.symbol} RSI ${round(signal.indicators.rsi14, 1)} seviyesinde.`, signal.indicators.rsi14 <= 30 ? "success" : "warning");
-  if (type === "macd_cross" && signal.indicators?.macdCross === "bullish") return make(`${row.symbol} MACD yukarı kesişim verdi.`, "success");
-  if (type === "macd_cross" && signal.indicators?.macdCross === "bearish") return make(`${row.symbol} MACD aşağı kesişim verdi.`, "danger");
-  if (type === "macd_cross" && Number.isFinite(signal.indicators?.macdHistogram) && Math.abs(signal.indicators.macdHistogram) <= (threshold ?? 0.5)) return make(`${row.symbol} MACD kesişim bölgesinde.`);
-  if (type === "ma_trend_break" && Number.isFinite(signal.indicators?.sma50) && Number.isFinite(row.price) && row.price < signal.indicators.sma50) return make(`${row.symbol} fiyatı MA50 altına indi.`, "danger");
-  if (type === "bollinger_breakout" && Number.isFinite(signal.indicators?.bollingerUpper) && Number.isFinite(row.price) && row.price > signal.indicators.bollingerUpper) return make(`${row.symbol} Bollinger üst bandını kırdı.`, "success");
-  if (type === "bollinger_breakout" && Number.isFinite(signal.indicators?.bollingerLower) && Number.isFinite(row.price) && row.price < signal.indicators.bollingerLower) return make(`${row.symbol} Bollinger alt bandını kırdı.`, "danger");
-  if (type === "volume_spike" && Number.isFinite(signal.indicators?.volumeSpikeRatio) && signal.indicators.volumeSpikeRatio >= (threshold ?? 1.8)) return make(`${row.symbol} hacim ortalamanın ${round(signal.indicators.volumeSpikeRatio, 1)} katı.`, "warning");
+  if (type === "rsi_extreme" && Number.isFinite(signal.indicators.rsi14) && (signal.indicators.rsi14 <= (threshold ?? 30) || signal.indicators.rsi14 >= 70)) return make(`${row.symbol} RSI ${round(signal.indicators.rsi14, 1)} seviyesinde.`, signal.indicators.rsi14 <= 30 ? "success" : "warning");
+  if (type === "macd_cross" && signal.indicators.macdCross === "bullish") return make(`${row.symbol} MACD yukarı kesişim verdi.`, "success");
+  if (type === "macd_cross" && signal.indicators.macdCross === "bearish") return make(`${row.symbol} MACD aşağı kesişim verdi.`, "danger");
+  if (type === "macd_cross" && Number.isFinite(signal.indicators.macdHistogram) && Math.abs(signal.indicators.macdHistogram) <= (threshold ?? 0.5)) return make(`${row.symbol} MACD kesişim bölgesinde.`);
+  if (type === "ma_trend_break" && Number.isFinite(signal.indicators.sma50) && Number.isFinite(row.price) && row.price < signal.indicators.sma50) return make(`${row.symbol} fiyatı MA50 altına indi.`, "danger");
+  if (type === "bollinger_breakout" && Number.isFinite(signal.indicators.bollingerUpper) && Number.isFinite(row.price) && row.price > signal.indicators.bollingerUpper) return make(`${row.symbol} Bollinger üst bandını kırdı.`, "success");
+  if (type === "bollinger_breakout" && Number.isFinite(signal.indicators.bollingerLower) && Number.isFinite(row.price) && row.price < signal.indicators.bollingerLower) return make(`${row.symbol} Bollinger alt bandını kırdı.`, "danger");
+  if (type === "volume_spike" && Number.isFinite(signal.indicators.volumeSpikeRatio) && signal.indicators.volumeSpikeRatio >= (threshold ?? 1.8)) return make(`${row.symbol} hacim ortalamanın ${round(signal.indicators.volumeSpikeRatio, 1)} katı.`, "warning");
   if (type === "news_high" && row.newsImpact === "high") return make(`${row.symbol} için yüksek etkili haber akışı var.`, row.newsSentiment === "negative" ? "danger" : "success");
   if (type === "risk_rising" && (row.riskLevel === "high" || signal.risk === "high")) return make(`${row.symbol} risk seviyesi yüksek.`, "danger");
   return null;
@@ -339,7 +339,7 @@ function getMacdCross(previous, current) {
 }
 
 function getBollingerPosition(price, bands) {
-  if (!Number.isFinite(price) || !Number.isFinite(bands?.upper) || !Number.isFinite(bands?.lower)) return "middle";
+  if (!Number.isFinite(price) || !Number.isFinite(bands.upper) || !Number.isFinite(bands.lower)) return "middle";
   const span = bands.upper - bands.lower;
   if (span <= 0) return "middle";
   const ratio = (price - bands.lower) / span;
@@ -514,6 +514,7 @@ function round(value, digits = 2) {
   const number = Number(value);
   return Number.isFinite(number) ? Number(number.toFixed(digits)) : null;
 }
+
 
 module.exports = {
   ALERT_TYPES,

@@ -65,7 +65,7 @@ Aynı başlığa tekrar tıklanırsa sıralama yönü değişir.
 
 ## Isı Haritası ve Sinyaller
 
-- `ReturnHeatmap` bileşeni her hisse için 1A-12A getirileri gösterir.
+- `ReturnHeatmap` bileşeni her hisse için 1A-12A getiri ısı haritasını gösterir.
 - Yeşil hücreler pozitif, kırmızı hücreler negatif, gri hücreler veri yok durumudur.
 - Renk yoğunluğu mutlak getiri büyüdükçe artar.
 - Tablo görünümünde heatmap kompakt gösterilir; detay panelinde değer etiketleriyle daha geniş gösterilir.
@@ -73,6 +73,16 @@ Aynı başlığa tekrar tıklanırsa sıralama yönü değişir.
 - Gelişmiş sinyal listesi ve alarm motoru yalnızca `#signals` sayfasında gösterilir.
 - Sinyal satırına tıklanınca seçili hisse detay paneli grafik sekmesine geçer ve sinyal marker'ı grafikte görünür.
 - Alarm kuralları ve tetiklenen alarm geçmişi localStorage'da saklanır.
+
+## Screener
+
+- Screener hazır presetleri, kategori heatmap'i ve karşılaştırma matrisiyle çalışır.
+- Gelişmiş kriter panelinde minimum sinyal skoru, maksimum risk skoru, minimum analist hedef farkı ve trigger kategorisi seçilebilir.
+- Kaydedilen screener presetleri dashboard filtreleriyle birlikte gelişmiş kriterleri de saklar.
+- Trigger kategorileri teknik, hacim, Fib, haber ve risk olarak ayrılır.
+- Screener özetinde analist hedefi güncel fiyatın üstünde olan hisse sayısı ve pozitif haber sayısı görünür.
+- Karşılaştırma matrisinde analist hedef farkı, haber skoru ve trigger özetleri gösterilir.
+- Tarama CSV dışa aktarımı analist hedef farkı ve tetikleyici kategorilerini içerir.
 
 ## Detay Paneli
 
@@ -90,6 +100,9 @@ Grafik sekmesi:
 - Fiyat çizgisi ve Fib hedef çizgisi gösterilir.
 - Fib hedef çizgisi grafik üzerinde etiketlenir.
 - Grafik üzerinde hover yapılınca ilgili konumdaki fiyat marker ve tooltip olarak gösterilir.
+- Grafik hover bilgisinde tarih, fiyat, OHLC ve hacim bilgisi bulunur.
+- History verisi OHLC içeriyorsa grafik çizgisiyle birlikte mum katmanı ve hacim barları gösterilir.
+- MA overlay etiketleri sol üst rayda, Fibonacci seviye etiketleri sağ rayda gösterilir; böylece grafik üzerindeki çizgiler ve sinyal rozeti birbirini örtmez.
 - Grafik altında 1A-12A heatmap ve getiri kutuları bulunur.
 
 Fib hedef formu:
@@ -138,6 +151,54 @@ Katalog panelinde:
 - Sabit katalog hisseleri de `Sil` aksiyonu ile izleme listesinden gizlenebilir; aynı sembol Nasdaq listesinden tekrar eklenirse görünür hale gelir.
 - Özel hisse silinince snapshot, history, performance, news, analysis, favori, özel hedef ve yatırım planı ilişkili state'ten temizlenir.
 
+## Portföy ve Risk
+
+- Portföy KPI alanında piyasa değeri, açık P/L, gerçekleşmiş P/L, risk edilen tutar ve hedefe kalan değer gösterilir.
+- İşlem performansı kartı, işlem günlüğündeki satışlardan kapanan işlem sayısını, kazanç oranını, ortalama kazanç/kayıp yüzdelerini ve net gerçekleşmiş P/L bilgisini hesaplar.
+- Portföy CSV export kapanan işlem, kazanç/kayıp sayısı ve kazanç oranı kolonlarını içerir.
+- Broker CSV içe aktarma kartında örnek CSV yükleme, geçerli/uyarı sayısı, alım/satım toplam değeri ve etkilenen semboller görünür; önizleme yapmadan localStorage'a yazılmaz.
+- Broker CSV içe aktarma geçerli satırları işlem günlüğüne aktarır ve alım/satım pozisyon adedi ile ortalama maliyeti günceller.
+- Risk Limit Özeti kartında risk/portföy oranı, yüksek riskli pozisyon sayısı, en büyük pozisyon ağırlığı ve stop tanımı olmayan pozisyon sayısı gösterilir.
+- Risk listesi stop mesafesi ve risk edilen tutara göre, hedef listesi Fib/manuel hedef mesafesine göre sıralanır.
+- Kategori yoğunlaşması kartı piyasa değeri, açık P/L ve risk dağılımını kategori bazında gösterir.
+
+## Raporlama
+
+- Günlük piyasa özeti kartında görünür hisse, canlı veri, pozitif/negatif getiri, Fib yakın, risk ve alarm metrikleri gösterilir.
+- Günlük piyasa özetinde portföy açık P/L, gerçekleşmiş P/L ve işlem kazanç oranı ayrı paragraf olarak görünür.
+- Haftalık rapor kartında en güçlü performans, zayıf performans, risk kontrol listesi, Fib hedefine yakın hisseler, haber etkisi izleme ve portföy disiplini bölümleri görünür.
+- HTML rapor aynı haftalık bölüm modelini kullanır; her tabloda sembol, şirket, kategori, fiyat, ana metrik ve izleme notu yer alır.
+- CSV export kapsamı izleme listesi, sinyaller, portföy pozisyonları, işlem günlüğü ve alarm geçmişini ayrı dosyalar olarak sunar.
+- JSON yedek/içe aktarma kullanıcı verisini localStorage kapsamıyla sınırlar.
+- JSON içe aktarma alanı yapıştırılan yedek içeriğini yazmadan önce doğrular; geçerli dosyada içe aktarılacak localStorage kapsamı ve kayıt sayıları önizleme kartında görünür.
+
+## Komut Paleti
+
+- `Ctrl+K` komut paleti sayfa geçişi, hisse açma, araştırma açma ve filtre komutlarını destekler.
+- Hazır çalışma alanı komutları bulunur: Favoriler, Risk, Fib'e yakın, Haber etkisi, Portföy ve mevcut kategoriye göre AI/NAND.
+- Çalışma alanı komutları yeni veri modeli oluşturmaz; mevcut filtreleri, sıralamaları ve route'ları tek aksiyonla uygular.
+- Komut butonları stabil test/otomasyon için `data-command-id` taşır; workspace komutları `workspace-*` id standardını kullanır.
+
+## Araştırma Paneli
+
+- Araştırma paneli Türkçe özet, haftalık özet, haber etkisi, analist hedefi ve `+1G/+3G/+7G` fiyat tepkisini gösterir.
+- Teknik detay kartı sinyal, skor, güven, risk, trigger etiketleri ve açıklama nedenlerini listeler.
+- Risk ve analist kartı risk skoru, risk seviyesi, analist hedefi, hedef farkı ve risk uyarılarını gösterir.
+- En etkili haberlerde Türkçe özetin altında haber sonrası fiyat reaksiyonu ve haberin neden öne çıkarıldığı yazılır.
+
+## Admin Operasyon Paneli
+
+- Yönetim paneli giriş sonrası sistem sağlığı, uygulama ayarları, LLM ayarları, sağlayıcı/önbellek, görev, araştırma kaydı ve denetim kartlarını gösterir.
+- Sağlayıcı satırlarında aç/kapat, ad, öncelik, temel URL, test URL, zaman aşımı ve not alanları düzenlenebilir; kayıtlı sağlayıcının kimliği secret eşleşmesini korumak için kilitlidir. Yeni eklenen sağlayıcının kimliği ilk kayda kadar düzenlenebilir.
+- `Sağlayıcı Ekle`, `Sil`, `Sağlayıcıları Kaydet` ve `Test Et` aksiyonları bulunur. Kaydedilmemiş sağlayıcı taslağı yönetim paneli yenilense bile ekranda korunur ve `Kaydedilmemiş` rozetiyle gösterilir.
+- Sağlayıcı test sonucu satırı başarı/hata durumunu, HTTP kodunu, süreyi ve test saatini gösterir. Secret alanları UI draft'ına taşınmaz ve gerçek değerle gösterilmez; backend maskeli/preserve akışını korur.
+- LLM ayar kartında `LLM Test Et` aksiyonu bulunur; secret değerler gösterilmeden sadece test durumu ve kısa mesaj yazılır.
+- Test sonucu yoksa kullanıcıya `henüz test edilmedi` durumu gösterilir; boş alan bırakılmaz.
+- Görev çalıştırma ve önbellek temizleme aksiyonları sonrası `Son Operasyon Sonucu` kartında tür, durum, hedef, başlangıç, bitiş ve süre bilgisi gösterilir.
+- Denetim kartında aksiyon/kullanıcı/durum üzerinden arama yapılabilir, durum filtresi seçilebilir ve toplam/başarılı/uyarı/hata/görünen kayıt özeti gösterilir.
+- Araştırma kayıtları kartında sembol/özet/sağlayıcı araması, sağlayıcı filtresi, toplam/görünen/sağlayıcı/yüksek etki/son üretim özeti ve araştırma kaydı temizleme aksiyonu bulunur.
+- Yönetim veri yükleme akışında oturum doğrulaması ayrı tutulur; araştırma/dışa aktarma gibi ikincil bölüm hatalarında panel kapanmaz, kullanıcıya eksik bölüm mesajı gösterilir.
+
 ## Logo
 
 Logo URL'si UI tarafında proxy üzerinden kullanılır:
@@ -146,13 +207,13 @@ Logo URL'si UI tarafında proxy üzerinden kullanılır:
 {PROXY_ROOT}/api/logo/{SYMBOL}
 ```
 
-Logo yüklenemezse inline SVG fallback kullanılır. UI dış favicon servislerine doğrudan gitmez; böylece console/network 404 oluşmaz.
+Logo yüklenemezse gömülü SVG yedek görsel kullanılır. UI dış favicon servislerine doğrudan gitmez; böylece konsol/ağ 404 hatası oluşmaz.
 
 ## Animasyon ve Görsel Kurallar
 
 - KPI değerleri kısa geçiş animasyonu kullanır.
 - Hover satırları hafif yükselir.
 - Grafik çizgisi glow efekti kullanır.
-- Heatmap hücreleri pozitif/negatif yoğunluğu görsel olarak vurgular.
+- Isı haritası hücreleri pozitif/negatif yoğunluğu görsel olarak vurgular.
 - Fibonacci toast sağ üstte çıkar; grafik veya detay panel metinlerini örtmez.
 - `prefers-reduced-motion` korunur.

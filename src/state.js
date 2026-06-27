@@ -42,7 +42,10 @@ const defaultInvestmentPlan = {
   entryPrice: null,
   buyZone: "",
   stopPrice: null,
-  positionTag: "\u0130zle"
+  positionTag: "\u0130zle",
+  shares: null,
+  avgCost: null,
+  journal: []
 };
 
 function readSettings() {
@@ -132,8 +135,29 @@ function sanitizeInvestmentPlan(value) {
     entryPrice: sanitizeNumberOrNull(plan.entryPrice),
     buyZone: sanitizeText(plan.buyZone),
     stopPrice: sanitizeNumberOrNull(plan.stopPrice),
-    positionTag: sanitizeText(plan.positionTag)
+    positionTag: sanitizeText(plan.positionTag),
+    shares: sanitizeNumberOrNull(plan.shares),
+    avgCost: sanitizeNumberOrNull(plan.avgCost),
+    journal: sanitizeJournalEntries(plan.journal)
   };
+}
+
+function sanitizeJournalEntries(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const entry = item && typeof item === "object" ? item : {};
+      const id = sanitizeText(entry.id || `journal-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+      const type = sanitizeText(entry.type || "not");
+      const date = sanitizeText(entry.date || new Date().toISOString().slice(0, 10));
+      const price = sanitizeNumberOrNull(entry.price);
+      const quantity = sanitizeNumberOrNull(entry.quantity);
+      const note = sanitizeText(entry.note);
+      if (!id || (!note && price === null && quantity === null)) return null;
+      return { id, type, date, price, quantity, note };
+    })
+    .filter(Boolean)
+    .slice(-100);
 }
 
 function sanitizeCustomStock(value) {
@@ -159,7 +183,7 @@ function sanitizeCustomStock(value) {
 function normalizeLogoInput(value) {
   const raw = sanitizeText(value);
   if (!raw) return "";
-  if (/^https?:\/\//i.test(raw)) return raw;
+  if (/^https:\/\//i.test(raw)) return raw;
   const domain = raw.replace(/^www\./i, "").replace(/\/.*$/, "");
   return domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : "";
 }
@@ -177,7 +201,26 @@ function mergeStocks(baseStocks, customStocks, hiddenSymbols = new Set()) {
 }
 
 function sanitizeText(value) {
-  return String(value ?? "").trim();
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return "";
+  return fixEncoding(normalized);
+}
+
+function fixEncoding(value) {
+  if (!/[\u00c2\u00c3\u00c4\u00c5]/.test(value)) return value;
+  try {
+    const bytes = new Uint8Array(value.length);
+    for (let i = 0; i < value.length; i += 1) {
+      bytes[i] = value.charCodeAt(i) & 0xff;
+    }
+    const decoded = new TextDecoder("utf-8").decode(bytes);
+    if (!decoded.includes("\uFFFD") && /[\u00c0-\u00ff]/.test(decoded)) {
+      return decoded;
+    }
+  } catch {
+    // Preserve original text if UTF-8 fix cannot be parsed.
+  }
+  return value;
 }
 
 function sanitizeNumberOrNull(value) {
@@ -325,9 +368,9 @@ export function persistSnapshots() {
 function loadOfflineSnapshots() {
   try {
     const parsed = JSON.parse(readStorageItem(SNAPSHOT_KEY) || "null");
-    if (!Array.isArray(parsed?.data)) return;
+    if (!Array.isArray(parsed.data)) return;
     for (const snapshot of parsed.data) {
-      state?.snapshots?.set?.(snapshot.symbol, { ...snapshot, source: snapshot.source || "lastKnown", isStale: true, isLive: false });
+      state.snapshots.set(snapshot.symbol, { ...snapshot, source: snapshot.source || "lastKnown", isStale: true, isLive: false });
     }
   } catch {
     // Offline cache is optional.
@@ -460,7 +503,7 @@ export function renameCustomCategory(oldValue, nextValue) {
   ).map(sanitizeCustomCategory).filter(Boolean))).sort((a, b) => a.localeCompare(b, "tr"));
   state.customStocks = state.customStocks.map((stock) =>
     stock.category.localeCompare(oldCategory, "tr", { sensitivity: "base" }) === 0
-      ? { ...stock, category: nextCategory, categoryDescription: nextCategory }
+       ? { ...stock, category: nextCategory, categoryDescription: nextCategory }
       : stock
   );
   state.stocks = mergeStocks(STOCKS, state.customStocks, state.hiddenSymbols);
@@ -485,7 +528,7 @@ export function setCatalogStatus(kind, message = "") {
 }
 
 export function setNasdaqUniverse(payload) {
-  const rows = Array.isArray(payload?.rows) ? payload.rows : [];
+  const rows = Array.isArray(payload.rows) ? payload.rows : [];
   state.nasdaqUniverse = rows
     .map((row) => ({
       symbol: String(row.symbol || "").toUpperCase(),
@@ -500,11 +543,11 @@ export function setNasdaqUniverse(payload) {
     }))
     .filter((row) => row.symbol && row.company);
   state.nasdaqUniverseMeta = {
-    count: Number(payload?.count || state.nasdaqUniverse.length),
-    returned: Number(payload?.returned || state.nasdaqUniverse.length),
-    source: payload?.source || "Nasdaq",
-    savedAt: payload?.savedAt || null,
-    stale: Boolean(payload?.stale)
+    count: Number(payload.count || state.nasdaqUniverse.length),
+    returned: Number(payload.returned || state.nasdaqUniverse.length),
+    source: payload.source || "Nasdaq",
+    savedAt: payload.savedAt || null,
+    stale: Boolean(payload.stale)
   };
 }
 
@@ -643,7 +686,7 @@ export function setUi(patch) {
 export function getFibTarget(stockOrSymbol) {
   const symbol = typeof stockOrSymbol === "string" ? stockOrSymbol : stockOrSymbol.symbol;
   const fallback = typeof stockOrSymbol === "string"
-    ? state.stocks.find((stock) => stock.symbol === stockOrSymbol)?.fibTarget
+     ? state.stocks.find((stock) => stock.symbol === stockOrSymbol).fibTarget
     : stockOrSymbol.fibTarget;
   const override = state.fibTargets[String(symbol || "").toUpperCase()];
   return Number.isFinite(Number(override)) && Number(override) > 0 ? Number(override) : Number(fallback);
@@ -733,7 +776,7 @@ export function getRowModel(stock) {
   const fibTarget = getFibTarget(stock);
   const fibDistanceAbs = Number.isFinite(price) && Number.isFinite(fibTarget) ? fibTarget - price : null;
   const fibDistancePct = Number.isFinite(price) && Number.isFinite(fibTarget) && fibTarget !== 0
-    ? ((fibTarget - price) / fibTarget) * 100
+     ? ((fibTarget - price) / fibTarget) * 100
     : null;
   const selectedReturn = getReturnFor(stock.symbol, state.filters.returnPeriod);
   const returns = Array.from({ length: 12 }, (_, index) => ({ month: index + 1, value: getReturnFor(stock.symbol, index + 1) }));
@@ -816,6 +859,9 @@ export function getRowModel(stock) {
     investmentBuyZone: investmentPlan.buyZone,
     investmentStopPrice: investmentPlan.stopPrice,
     investmentPositionTag: investmentPlan.positionTag,
+    investmentShares: investmentPlan.shares,
+    investmentAvgCost: investmentPlan.avgCost,
+    investmentJournal: investmentPlan.journal,
     score: scoreInfo.total,
     scoreInfo,
     isFavorite: state.favorites.has(stock.symbol),
@@ -829,10 +875,10 @@ function normalizeNewsRow(rawNews) {
   const news = rawNews && typeof rawNews === "object" ? rawNews : {};
   const impactSummary = news.impactSummary && typeof news.impactSummary === "object" ? news.impactSummary : {};
   const newsSentimentScore = Number.isFinite(Number(impactSummary.averageSentimentScore))
-    ? Number(impactSummary.averageSentimentScore)
+     ? Number(impactSummary.averageSentimentScore)
     : 0;
   const newsImpactScore = Number.isFinite(Number(impactSummary.averageImpactScore))
-    ? Number(impactSummary.averageImpactScore)
+     ? Number(impactSummary.averageImpactScore)
     : 0;
   return {
     newsSentimentScore,
@@ -991,7 +1037,18 @@ export function getVisibleRows() {
 
 function isAllCategory(value) {
   const normalized = String(value || "all").toLowerCase();
-  return normalized === "all" || normalized === "tümü" || normalized === "tumu" || normalized === "tm" || normalized.includes("t?m") || normalized.includes("tm");
+  const normalizedNoAccent = normalized
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+  return (
+    normalized === "all" ||
+    normalizedNoAccent === "tumu" ||
+    normalizedNoAccent === "tum" ||
+    normalized === "tümü" ||
+    normalized === "tumu" ||
+    normalized === "tm" ||
+    normalized.includes("tm")
+  );
 }
 
 function normalizeCategoryFilter(value) {
@@ -1113,5 +1170,3 @@ export function getKpis(rows = getVisibleRows()) {
     topAnalystTarget
   };
 }
-
-

@@ -2,6 +2,14 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { computeSignal } = require("./src/signal-engine.cjs");
+const { createMatrixAdminFoundation, maskSensitive } = require("./src/admin/matrix-admin-foundation.cjs");
+
+let DatabaseSync = null;
+try {
+  ({ DatabaseSync } = require("node:sqlite"));
+} catch {
+  DatabaseSync = null;
+}
 
 const PORT = 8766;
 const VERSION = "2.0.0";
@@ -53,7 +61,7 @@ const catalogMap = new Map(catalog.map((stock) => [stock.symbol, stock]));
 let fvtCache = null;
 let fvtCacheTime = 0;
 let nasdaqUniverseCache = readNasdaqUniverseCache();
-let nasdaqUniverseCacheTime = nasdaqUniverseCache?.savedAt || 0;
+let nasdaqUniverseCacheTime = nasdaqUniverseCache.savedAt || 0;
 const historyCache = new Map();
 const performanceCache = new Map();
 const snapshotCache = new Map();
@@ -82,11 +90,40 @@ const counters = {
 };
 
 const lastKnownPrices = Object.fromEntries(catalog.map((stock) => [stock.symbol, null]));
+const adminFoundation = createMatrixAdminFoundation({
+  dataDir: path.join(__dirname, "data"),
+  dbPath: path.join(__dirname, "data", "matrix-admin.sqlite"),
+  DatabaseSync,
+  sourcePriority: SOURCE_PRIORITY,
+  runtime: {
+    timezone: "Europe/Istanbul",
+    marketLocale: "tr-TR",
+    staleThresholdSec: MARKET_STALE_SEC,
+    cacheHandlers: {
+      clear: clearRuntimeCache
+    }
+  },
+  jobs: createAdminJobs()
+});
+
+function sanitizeText(value) {
+  const text = String(value || "").trim();
+  if (!text || !/[\u00c2\u00c3\u00c4\u00c5]/.test(text)) return text;
+  try {
+    const decoded = Buffer.from(text, "latin1").toString("utf8");
+    if (!decoded.includes("\uFFFD") && /[\u00c0-\u00ff]/.test(decoded)) {
+      return decoded;
+    }
+  } catch {
+    // Keep original text if decoding fails.
+  }
+  return text;
+}
 
 function readNasdaqUniverseCache() {
   try {
     const parsed = JSON.parse(fs.readFileSync(nasdaqUniversePath, "utf8"));
-    if (!Array.isArray(parsed?.data)) return null;
+    if (!Array.isArray(parsed.data)) return null;
     return {
       savedAt: Number(parsed.savedAt) || 0,
       source: parsed.source || "cache",
@@ -111,8 +148,8 @@ function sendJson(res, status, payload) {
   else counters.responses2xx += 1;
   res.writeHead(status, {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Accept",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Accept, Authorization, X-Admin-Session",
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store"
   });
@@ -196,7 +233,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
 }
 
 function logoFallbackSvg(stock) {
-  const symbol = escapeSvg(String(stock?.symbol || "").slice(0, 5));
+  const symbol = escapeSvg(String(stock.symbol || "").slice(0, 5));
   return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><rect width="256" height="256" rx="64" fill="#ffffff"/><circle cx="128" cy="128" r="86" fill="#f1f5f9"/><text x="128" y="143" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="800" fill="#0f172a">${symbol}</text></svg>`);
 }
 
@@ -209,7 +246,7 @@ function extractLogoDomain(logoUrl) {
   try {
     const parsed = new URL(logoUrl);
     const domainParam = parsed.searchParams.get("domain");
-    if (domainParam) return domainParam.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    if (domainParam) return domainParam.replace(/^https:\/\//, "").replace(/\/.*$/, "");
     return parsed.hostname.replace(/^www\./, "");
   } catch {
     return null;
@@ -247,13 +284,13 @@ function normalizeNasdaqSymbol(symbol) {
 }
 
 function cleanNasdaqCompanyName(name) {
-  return String(name || "")
+  return sanitizeText(String(name || "")
     .replace(/\s+-\s+Common Stock.*$/i, "")
     .replace(/\s+Common Stock.*$/i, "")
     .replace(/\s+-\s+Class [A-Z].*$/i, "")
     .replace(/\s+Ordinary Shares.*$/i, "")
     .replace(/\s+American Depositary Shares.*$/i, "")
-    .trim();
+    .trim());
 }
 
 function inferNasdaqCategory(row, company, symbol) {
@@ -261,11 +298,11 @@ function inferNasdaqCategory(row, company, symbol) {
   if (override.category) return override.category;
   const haystack = [
     company,
-    row?.sector,
-    row?.Sector,
-    row?.industry,
-    row?.Industry,
-    row?.name,
+    row.sector,
+    row.Sector,
+    row.industry,
+    row.Industry,
+    row.name,
     row?.["Security Name"],
     symbol
   ].filter(Boolean).join(" ").toLowerCase();
@@ -287,24 +324,24 @@ function autoFibTargetFromPrice(price) {
 }
 
 function normalizeNasdaqUniverseRow(row) {
-  const symbol = normalizeNasdaqSymbol(row?.symbol || row?.Symbol);
-  const company = cleanNasdaqCompanyName(row?.name || row?.["Security Name"] || row?.company || symbol);
+  const symbol = normalizeNasdaqSymbol(row.symbol || row.Symbol);
+  const company = cleanNasdaqCompanyName(row.name || row?.["Security Name"] || row.company || symbol);
   if (!symbol || !company || symbol === "FILE") return null;
   if (!/^[A-Z0-9.-]{1,12}$/.test(symbol)) return null;
   const override = NASDAQ_COMPANY_OVERRIDES[symbol] || {};
-  const domain = override.domain || row?.domain || inferLogoDomain(symbol, company);
-  const category = row?.category || inferNasdaqCategory(row, company, symbol);
-  const rawPrice = row?.lastsale || row?.lastSale || row?.price || row?.Price;
+  const domain = override.domain || row.domain || inferLogoDomain(symbol, company);
+  const category = row.category || inferNasdaqCategory(row, company, symbol);
+  const rawPrice = row.lastsale || row.lastSale || row.price || row.Price;
   return {
     symbol,
-    company,
+    company: sanitizeText(company),
     exchange: "NASDAQ",
-    category,
-    categoryDescription: category,
-    marketCategory: row?.marketCategory || row?.["Market Category"] || "",
-    isEtf: String(row?.etf || row?.ETF || "").toUpperCase() === "Y",
-    isTest: String(row?.testIssue || row?.["Test Issue"] || "").toUpperCase() === "Y",
-    autoFibTarget: row?.autoFibTarget || autoFibTargetFromPrice(String(rawPrice || "").replace(/[$,]/g, "")),
+    category: sanitizeText(category),
+    categoryDescription: sanitizeText(category),
+    marketCategory: sanitizeText(row.marketCategory || row?.["Market Category"] || ""),
+    isEtf: String(row.etf || row.ETF || "").toUpperCase() === "Y",
+    isTest: String(row.testIssue || row?.["Test Issue"] || "").toUpperCase() === "Y",
+    autoFibTarget: row.autoFibTarget || autoFibTargetFromPrice(String(rawPrice || "").replace(/[$,]/g, "")),
     logo: googleFaviconUrl(domain, 256),
     domain,
     aliases: Array.isArray(override.aliases) ? override.aliases : []
@@ -322,7 +359,7 @@ async function fetchNasdaqScreenerUniverse() {
   }, 20000);
   if (!response.ok) throw new Error(`Nasdaq screener HTTP ${response.status}`);
   const json = await response.json();
-  const rows = json?.data?.table?.rows;
+  const rows = json.data.table.rows;
   if (!Array.isArray(rows) || !rows.length) throw new Error("Nasdaq screener data missing");
   return rows.map(normalizeNasdaqUniverseRow).filter(Boolean);
 }
@@ -331,7 +368,7 @@ async function fetchNasdaqTraderUniverse() {
   const response = await fetchWithTimeout(NASDAQ_TRADER_URL, { headers: { Accept: "text/plain,*/*", "User-Agent": "Mozilla/5.0" } }, 20000);
   if (!response.ok) throw new Error(`NasdaqTrader HTTP ${response.status}`);
   const text = await response.text();
-  const [headerLine, ...lines] = text.trim().split(/\r?\n/);
+  const [headerLine, ...lines] = text.trim().split(/\r\n/);
   const headers = headerLine.split("|");
   return lines
     .map((line) => Object.fromEntries(line.split("|").map((value, index) => [headers[index], value])))
@@ -340,7 +377,7 @@ async function fetchNasdaqTraderUniverse() {
 }
 
 async function getNasdaqUniverse({ force = false } = {}) {
-  if (!force && nasdaqUniverseCache?.data?.length && Date.now() - nasdaqUniverseCacheTime < NASDAQ_UNIVERSE_TTL_MS) {
+  if (!force && nasdaqUniverseCache.data.length && Date.now() - nasdaqUniverseCacheTime < NASDAQ_UNIVERSE_TTL_MS) {
     counters.cacheHits += 1;
     return nasdaqUniverseCache;
   }
@@ -360,7 +397,7 @@ async function getNasdaqUniverse({ force = false } = {}) {
       pushErrorLog({ url: `/api/nasdaq-universe/${source}` }, error);
     }
   }
-  if (nasdaqUniverseCache?.data?.length) return { ...nasdaqUniverseCache, stale: true, errors };
+  if (nasdaqUniverseCache.data.length) return { ...nasdaqUniverseCache, stale: true, errors };
   throw new Error(`Nasdaq evreni alınamadı. ${errors.join(" | ")}`);
 }
 
@@ -376,7 +413,7 @@ function filterNasdaqUniverse(rows, query, limit = 80) {
 }
 
 function logoCandidates(stock) {
-  const symbol = String(stock?.symbol || "").toUpperCase();
+  const symbol = String(stock.symbol || "").toUpperCase();
   const symbolSlug = symbol.replace(/\./g, "-").replace(/\//g, "-");
   const domain = extractLogoDomain(stock.logo);
   const urls = [];
@@ -387,7 +424,7 @@ function logoCandidates(stock) {
     urls.push(`https://financialmodelingprep.com/image-stock/${symbol}.png`);
   }
   if (domain) {
-    urls.push(`https://logo.clearbit.com/${domain}?size=256`);
+    urls.push(`https://logo.clearbit.com/${domain}size=256`);
     urls.push(`https://logo.clearbit.com/${domain}`);
     urls.push(googleFaviconUrl(domain, 512));
     urls.push(googleFaviconUrl(domain, 256));
@@ -399,7 +436,7 @@ function logoCandidates(stock) {
 }
 
 async function getLogo(symbol) {
-  const stock = catalogMap.get(symbol) || nasdaqUniverseCache?.data?.find((row) => row.symbol === symbol);
+  const stock = catalogMap.get(symbol) || nasdaqUniverseCache.data.find((row) => row.symbol === symbol);
   if (!stock) {
     const error = new Error(`${symbol} is not in catalog`);
     error.status = 404;
@@ -435,7 +472,7 @@ async function getFvtStocks() {
     const response = await fetchWithTimeout(FVT_STOCKS_URL);
     if (!response.ok) throw new Error(`FVT HTTP ${response.status}`);
     const json = await response.json();
-    const rows = Array.isArray(json?.data?.data) ? json.data.data : [];
+    const rows = Array.isArray(json.data.data) ? json.data.data : [];
     fvtCache = rows;
     fvtCacheTime = Date.now();
     return rows;
@@ -443,9 +480,9 @@ async function getFvtStocks() {
 }
 
 function parseFvtStock(stock) {
-  const price = Number(stock?.anlikFiyat || stock?.fiyat || stock?.gunlukKapanis);
-  const updated = stock?.sonGuncelleme
-    ? Math.floor(new Date(stock.sonGuncelleme).getTime() / 1000)
+  const price = Number(stock.anlikFiyat || stock.fiyat || stock.gunlukKapanis);
+  const updated = stock.sonGuncelleme
+     ? Math.floor(new Date(stock.sonGuncelleme).getTime() / 1000)
     : Math.floor(Date.now() / 1000);
   if (!Number.isFinite(price)) throw new Error("FVT price missing");
   return { price, updatedAt: updated, source: "FVT" };
@@ -471,13 +508,25 @@ async function getYahooChart(symbol, range = "1d", interval = "5m") {
     const response = await fetchWithTimeout(url);
     if (!response.ok) throw new Error(`Yahoo chart HTTP ${response.status}`);
     const json = await response.json();
-    const result = json?.chart?.result?.[0];
-    const timestamps = Array.isArray(result?.timestamp) ? result.timestamp : [];
-    const closes = Array.isArray(result?.indicators?.quote?.[0]?.close) ? result.indicators.quote[0].close : [];
+    const result = json.chart.result?.[0];
+    const timestamps = Array.isArray(result.timestamp) ? result.timestamp : [];
+    const quote = result.indicators.quote?.[0] || {};
+    const closes = Array.isArray(quote.close) ? quote.close : [];
+    const opens = Array.isArray(quote.open) ? quote.open : [];
+    const highs = Array.isArray(quote.high) ? quote.high : [];
+    const lows = Array.isArray(quote.low) ? quote.low : [];
+    const volumes = Array.isArray(quote.volume) ? quote.volume : [];
     const points = timestamps
-      .map((time, index) => ({ time, close: typeof closes[index] === "number" ? closes[index] : null }))
+      .map((time, index) => ({
+        time,
+        close: typeof closes[index] === "number" ? closes[index] : null,
+        open: typeof opens[index] === "number" ? opens[index] : null,
+        high: typeof highs[index] === "number" ? highs[index] : null,
+        low: typeof lows[index] === "number" ? lows[index] : null,
+        volume: typeof volumes[index] === "number" ? volumes[index] : null
+      }))
       .filter((point) => typeof point.close === "number");
-    const payload = { symbol, range, interval, points, meta: result?.meta || {} };
+    const payload = { symbol, range, interval, points, meta: result.meta || {} };
     historyCache.set(key, { cacheTime: Date.now(), data: payload });
     return payload;
   });
@@ -485,8 +534,8 @@ async function getYahooChart(symbol, range = "1d", interval = "5m") {
 
 async function getYahooQuote(symbol) {
   const chart = await getYahooChart(symbol, "1d", "5m");
-  const metaPrice = Number(chart.meta?.regularMarketPrice);
-  const metaTime = Number(chart.meta?.regularMarketTime);
+  const metaPrice = Number(chart.meta.regularMarketPrice);
+  const metaTime = Number(chart.meta.regularMarketTime);
   if (Number.isFinite(metaPrice)) {
     return { price: metaPrice, updatedAt: Number.isFinite(metaTime) ? metaTime : Math.floor(Date.now() / 1000), source: "Yahoo Finance" };
   }
@@ -497,11 +546,11 @@ async function getYahooQuote(symbol) {
 
 async function getStooqQuote(symbol) {
   return timedSource("Stooq", async () => {
-    const url = `https://stooq.com/q/l/?s=${encodeURIComponent(symbol.toLowerCase() + ".us")}&f=sd2t2ohlcv&h&e=csv`;
+    const url = `https://stooq.com/q/l/s=${encodeURIComponent(symbol.toLowerCase() + ".us")}&f=sd2t2ohlcv&h&e=csv`;
     const response = await fetchWithTimeout(url, { headers: { Accept: "text/csv" } }, 6000);
     if (!response.ok) throw new Error(`Stooq HTTP ${response.status}`);
     const csv = await response.text();
-    const [headerLine, valueLine] = csv.trim().split(/\r?\n/);
+    const [headerLine, valueLine] = csv.trim().split(/\r\n/);
     if (!headerLine || !valueLine) throw new Error(`Stooq quote missing for ${symbol}`);
     const headers = headerLine.split(",");
     const values = valueLine.split(",");
@@ -509,7 +558,7 @@ async function getStooqQuote(symbol) {
     const close = Number(row.Close);
     if (!Number.isFinite(close) || close <= 0) throw new Error(`Stooq price missing for ${symbol}`);
     const timestamp = row.Date && row.Time && row.Date !== "N/D"
-      ? Math.floor(new Date(`${row.Date}T${row.Time}`).getTime() / 1000)
+       ? Math.floor(new Date(`${row.Date}T${row.Time}`).getTime() / 1000)
       : Math.floor(Date.now() / 1000);
     return { price: close, updatedAt: timestamp, source: "Stooq" };
   });
@@ -561,7 +610,7 @@ async function getYahooPerformance(symbol) {
     const month = index + 1;
     const targetTime = latest.time - month * monthSeconds;
     const base = [...points].reverse().find((point) => point.time <= targetTime);
-    return { month, percent: base?.close ? ((latest.close - base.close) / base.close) * 100 : null };
+    return { month, percent: base.close ? ((latest.close - base.close) / base.close) * 100 : null };
   });
   const payload = { symbol: key, updatedAt: latest.time, latestClose: latest.close, returns, points };
   performanceCache.set(key, { cacheTime: Date.now(), data: payload });
@@ -581,7 +630,7 @@ async function getYahooNews(symbol) {
     const response = await fetchWithTimeout(url, { headers: { Accept: "application/rss+xml,text/xml" } }, 7000);
     if (!response.ok) throw new Error(`Yahoo news HTTP ${response.status}`);
     const xml = await response.text();
-    const items = Array.from(xml.matchAll(/<item>([\s\S]*?)<\/item>/g)).slice(0, 6).map((match) => {
+    const items = Array.from(xml.matchAll(/<item>([\s\S]*)<\/item>/g)).slice(0, 6).map((match) => {
       const item = match[1];
       return normalizeNewsItem({
         symbol: key,
@@ -622,10 +671,10 @@ const SENTIMENT_KEYWORDS = {
 };
 
 function normalizeNewsItem(item) {
-  const title = String(item?.title || "").trim();
-  const url = String(item?.link || item?.url || "").trim();
-  const publishedAt = normalizePublishedAt(item?.publishedAt);
-  const source = normalizeNewsSource(item?.source, url);
+  const title = sanitizeText(item.title || "");
+  const url = sanitizeText(item.link || item.url || "");
+  const publishedAt = normalizePublishedAt(item.publishedAt);
+  const source = sanitizeText(normalizeNewsSource(item.source, url));
   const scores = scoreNewsTitle(title);
   return {
     title,
@@ -633,14 +682,14 @@ function normalizeNewsItem(item) {
     publishedAt,
     url,
     link: url,
-    symbol: String(item?.symbol || "").toUpperCase(),
+    symbol: String(item.symbol || "").toUpperCase(),
     sentiment: scores.sentiment,
     sentimentScore: scores.sentimentScore,
     impact: scores.impact,
     impactScore: scores.impactScore,
     turkishSummary: buildTurkishNewsSummary({
       title,
-      symbol: item?.symbol,
+      symbol: item.symbol,
       source,
       sentiment: scores.sentiment,
       impact: scores.impact
@@ -732,7 +781,7 @@ function summarizeNewsImpact(items) {
 }
 
 function readXml(xml, tag) {
-  const match = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`));
+  const match = xml.match(new RegExp(`<${tag}>([\\s\\S]*)<\\/${tag}>`));
   return match ? match[1].replace(/^<!\[CDATA\[/, "").replace(/\]\]>$/, "") : "";
 }
 
@@ -797,23 +846,23 @@ async function getFinvizAnalysis(symbol) {
 }
 
 function readFinvizField(html, label) {
-  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`<div class="snapshot-td-label"(?:[^>]*)>(?:<a[^>]*>)?${escapedLabel}(?:<\\/a>)?<\\/div><\\/td><td[^>]*><div class="snapshot-td-content">([\\s\\S]*?)<\\/div><\\/td>`, "i");
+  const escapedLabel = label.replace(/[.*+^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`<div class="snapshot-td-label"(:[^>]*)>(:<a[^>]*>)${escapedLabel}(:<\\/a>)<\\/div><\\/td><td[^>]*><div class="snapshot-td-content">([\\s\\S]*)<\\/div><\\/td>`, "i");
   const match = html.match(pattern);
   return match ? stripHtml(match[1]) : null;
 }
 
 function stripHtml(value) {
   return decodeXml(String(value || "")
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*<\/script>/gi, "")
+    .replace(/<style[\s\S]*<\/style>/gi, "")
     .replace(/<[^>]+>/g, "")
     .replace(/\s+/g, " ")
     .trim());
 }
 
 function parseNumberFromText(value) {
-  const match = String(value || "").replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+  const match = String(value || "").replace(/,/g, "").match(/-\d+(:\.\d+)/);
   return match ? Number(match[0]) : null;
 }
 
@@ -863,7 +912,7 @@ async function createSnapshot(symbol) {
   }
   if (!quote) {
     fallbackLevel = liveSources.length;
-    const previous = snapshotCache.get(symbol)?.data;
+    const previous = snapshotCache.get(symbol).data;
     if (previous) {
       quote = { price: previous.price, updatedAt: previous.updatedAt, source: "lastKnown" };
     } else if (lastKnownPrices[symbol]) {
@@ -876,7 +925,7 @@ async function createSnapshot(symbol) {
     sourceStats.lastKnown.success += 1;
     sourceStats.lastKnown.lastSuccess = Math.floor(Date.now() / 1000);
   }
-  const performance = performanceCache.get(symbol)?.data || null;
+  const performance = performanceCache.get(symbol).data || null;
   const price = Number(quote.price);
   const fib = Number(stock.fibTarget);
   const sourceFreshnessSec = Math.max(0, Math.floor(Date.now() / 1000) - Number(quote.updatedAt || 0));
@@ -896,10 +945,10 @@ async function createSnapshot(symbol) {
     metrics: {
       fibDistanceAbs: Number.isFinite(price) && Number.isFinite(fib) ? fib - price : null,
       fibDistancePct: Number.isFinite(price) && Number.isFinite(fib) && fib !== 0 ? ((fib - price) / fib) * 100 : null,
-      momentum1m: performance?.returns?.find((item) => item.month === 1)?.percent ?? null,
-      momentum3m: performance?.returns?.find((item) => item.month === 3)?.percent ?? null,
-      momentum12m: performance?.returns?.find((item) => item.month === 12)?.percent ?? null,
-      volatility20d: performance?.points ? volatility(performance.points, 20) : null,
+      momentum1m: performance.returns.find((item) => item.month === 1).percent ?? null,
+      momentum3m: performance.returns.find((item) => item.month === 3).percent ?? null,
+      momentum12m: performance.returns.find((item) => item.month === 12).percent ?? null,
+      volatility20d: performance.points ? volatility(performance.points, 20) : null,
       sourceFreshnessSec
     }
   };
@@ -918,14 +967,14 @@ async function createSignal(symbol, options = {}) {
     const snapshot = snapshotResult.status === "fulfilled" ? snapshotResult.value : { symbol: key };
     const performance = performanceResult.status === "fulfilled" ? performanceResult.value : null;
     const news = newsResult.status === "fulfilled" ? newsResult.value : null;
-    const summary = news?.impactSummary || {};
+    const summary = news.impactSummary || {};
     const sentimentScore = Number(summary.averageSentimentScore || 0);
     const impactScore = Number(summary.averageImpactScore || 0);
-    const stock = catalogMap.get(key) || nasdaqUniverseCache?.data?.find((row) => row.symbol === key) || { symbol: key, fibTarget: null };
+    const stock = catalogMap.get(key) || nasdaqUniverseCache.data.find((row) => row.symbol === key) || { symbol: key, fibTarget: null };
     return computeSignal({
       symbol: key,
       price: snapshot.price,
-      points: performance?.points || [],
+      points: performance.points || [],
       fibTarget: Number(stock.fibTarget),
       alertThreshold: Number(options.alertThreshold || 0.5),
       newsSentiment: sentimentScore > 0.25 ? "positive" : sentimentScore < -0.25 ? "negative" : "neutral",
@@ -956,12 +1005,403 @@ function parseSymbols(value) {
 }
 
 async function refreshNasdaqUniverseIfDue() {
-  if (nasdaqUniverseCache?.data?.length && Date.now() - nasdaqUniverseCacheTime < NASDAQ_UNIVERSE_TTL_MS) return;
+  if (nasdaqUniverseCache.data.length && Date.now() - nasdaqUniverseCacheTime < NASDAQ_UNIVERSE_TTL_MS) return;
   try {
     await getNasdaqUniverse({ force: true });
   } catch (error) {
     pushErrorLog({ url: "/api/nasdaq-universe/daily-refresh" }, error);
   }
+}
+
+function createAdminJobs() {
+  return [
+    {
+      id: "admin-self-check",
+      name: "Admin self check",
+      description: "Proxy, cache ve admin storage durumunu kontrol eder.",
+      async run() {
+        return {
+          service: "hisse-price-proxy",
+          version: VERSION,
+          uptimeSec: Math.floor(process.uptime()),
+          cache: getCacheSummary(),
+          storage: adminFoundation.storage || null
+        };
+      }
+    },
+    {
+      id: "nasdaq-universe-refresh",
+      name: "Nasdaq universe refresh",
+      description: "Nasdaq evrenini canlı kaynaklardan yeniler.",
+      async run() {
+        const universe = await getNasdaqUniverse({ force: true });
+        return {
+          count: universe.count || universe.data.length || 0,
+          source: universe.source,
+          savedAt: universe.savedAt,
+          stale: Boolean(universe.stale)
+        };
+      }
+    },
+    {
+      id: "cache-summary",
+      name: "Cache summary",
+      description: "Runtime cache boyutlarını raporlar.",
+      async run() {
+        return getCacheSummary();
+      }
+    }
+  ];
+}
+
+function getCacheSummary() {
+  return {
+    fvtReady: Boolean(fvtCache),
+    history: historyCache.size,
+    performance: performanceCache.size,
+    snapshots: snapshotCache.size,
+    logos: logoCache.size,
+    news: newsCache.size,
+    analysis: analysisCache.size,
+    nasdaqUniverse: nasdaqUniverseCache.data.length || 0
+  };
+}
+
+async function clearRuntimeCache(scope = "all") {
+  const normalized = String(scope || "all").toLowerCase();
+  const before = getCacheSummary();
+  if (normalized === "all" || normalized === "market") {
+    fvtCache = null;
+    fvtCacheTime = 0;
+    historyCache.clear();
+    performanceCache.clear();
+    snapshotCache.clear();
+    newsCache.clear();
+    analysisCache.clear();
+  }
+  if (normalized === "all" || normalized === "logos") logoCache.clear();
+  if (normalized === "all" || normalized === "nasdaq") {
+    nasdaqUniverseCacheTime = 0;
+  }
+  return {
+    before,
+    after: getCacheSummary()
+  };
+}
+
+function getAdminToken(req) {
+  const auth = req.headers.authorization || "";
+  if (/^Bearer\s+/i.test(auth)) return auth.replace(/^Bearer\s+/i, "").trim();
+  return String(req.headers["x-admin-session"] || "").trim();
+}
+
+async function readJsonBody(req) {
+  if (req.method === "GET" || req.method === "HEAD") return {};
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const text = Buffer.concat(chunks).toString("utf8").trim();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    const error = new Error("Invalid JSON body");
+    error.status = 400;
+    throw error;
+  }
+}
+
+async function handleAdminRequest(req, res, url) {
+  if (!url.pathname.startsWith("/api/admin")) return false;
+  const method = req.method || "GET";
+  const body = await readJsonBody(req);
+  const token = getAdminToken(req);
+  const actorFromSession = () => adminFoundation.requireSession(token).username || "admin";
+  const send = (payload) => {
+    sendJson(res, 200, { success: true, data: payload });
+    return true;
+  };
+
+  if (url.pathname === "/api/admin/login" && method === "POST") {
+    return send(await adminFoundation.login({
+      username: body.username,
+      password: body.password,
+      ipAddress: req.socket.remoteAddress,
+      userAgent: req.headers["user-agent"] || ""
+    }));
+  }
+  if (url.pathname === "/api/admin/logout" && method === "POST") {
+    const session = adminFoundation.requireSession(token);
+    return send(await adminFoundation.logout(token, session.username));
+  }
+  if (url.pathname === "/api/admin/me" && method === "GET") return send(adminFoundation.getMe(token));
+  if (url.pathname === "/api/admin/settings") {
+    const actor = actorFromSession();
+    return method === "PUT" ? send(adminFoundation.updateSettings(body, actor)) : send(adminFoundation.getSettings());
+  }
+  if (url.pathname === "/api/admin/providers") {
+    const actor = actorFromSession();
+    return method === "PUT" ? send(adminFoundation.updateProviders(body, actor)) : send(adminFoundation.getProviders());
+  }
+  const providerTestMatch = url.pathname.match(/^\/api\/admin\/providers\/([^/]+)\/test$/);
+  if ((url.pathname === "/api/admin/providers/test" || providerTestMatch) && method === "POST") {
+    const actor = actorFromSession();
+    return send(await adminFoundation.testProviders({
+      ...body,
+      providerId: providerTestMatch ? decodeURIComponent(providerTestMatch[1]) : body.providerId
+    }, actor));
+  }
+  if (url.pathname === "/api/admin/llm") {
+    const actor = actorFromSession();
+    return method === "PUT" ? send(adminFoundation.updateLlm(body, actor)) : send(adminFoundation.getLlm());
+  }
+  if (url.pathname === "/api/admin/llm/test" && method === "POST") {
+    return send(await adminFoundation.testLlm(body, actorFromSession()));
+  }
+  if (url.pathname === "/api/admin/jobs" && method === "GET") return send(adminFoundation.listJobs());
+  const jobRunMatch = url.pathname.match(/^\/api\/admin\/jobs\/([^/]+)\/run$/);
+  if ((url.pathname === "/api/admin/jobs/run" || jobRunMatch) && method === "POST") {
+    return send(await adminFoundation.runJob({
+      ...body,
+      jobId: jobRunMatch ? decodeURIComponent(jobRunMatch[1]) : body.jobId
+    }, actorFromSession()));
+  }
+  if (url.pathname === "/api/admin/cache" && method === "GET") {
+    actorFromSession();
+    return send(getCacheSummary());
+  }
+  if (url.pathname === "/api/admin/cache/clear" && method === "POST") {
+    return send(await adminFoundation.clearCache(body, actorFromSession()));
+  }
+  if (url.pathname === "/api/admin/audit" && method === "GET") {
+    actorFromSession();
+    return send(adminFoundation.listAudit(url.searchParams.get("limit") || 50));
+  }
+  if (url.pathname === "/api/admin/research-snapshots" && method === "GET") {
+    actorFromSession();
+    return send(adminFoundation.listResearchSnapshots(url.searchParams.get("limit") || 20));
+  }
+  if (url.pathname === "/api/admin/research-snapshots/clear" && method === "POST") {
+    return send(adminFoundation.clearResearchSnapshots(actorFromSession()));
+  }
+  if (url.pathname === "/api/admin/export" && method === "GET") {
+    actorFromSession();
+    return send(createAdminExport(url));
+  }
+  sendJson(res, 404, { success: false, message: "Admin endpoint not found" });
+  return true;
+}
+
+function createAdminExport(url) {
+  const status = adminFoundation.getStatus();
+  return {
+    generatedAt: Math.floor(Date.now() / 1000),
+    version: VERSION,
+    status,
+    settings: adminFoundation.getSettings(),
+    providers: adminFoundation.getProviders(),
+    llm: adminFoundation.getLlm(),
+    jobs: adminFoundation.listJobs(),
+    cache: getCacheSummary(),
+    audit: adminFoundation.listAudit(url.searchParams.get("auditLimit") || 50),
+    researchSnapshots: adminFoundation.listResearchSnapshots(url.searchParams.get("researchLimit") || 20)
+  };
+}
+
+async function createResearch(symbol) {
+  const key = String(symbol || "").trim().toUpperCase();
+  if (!key) {
+    const error = new Error("Research symbol is required");
+    error.status = 400;
+    throw error;
+  }
+  const [snapshotResult, newsResult, analysisResult, signalResult, performanceResult] = await Promise.allSettled([
+    createSnapshot(key),
+    getYahooNews(key),
+    getFinvizAnalysis(key),
+    createSignal(key),
+    getYahooPerformance(key)
+  ]);
+  const snapshot = snapshotResult.status === "fulfilled" ? snapshotResult.value : null;
+  const news = newsResult.status === "fulfilled" ? newsResult.value : null;
+  const analysis = analysisResult.status === "fulfilled" ? analysisResult.value : null;
+  const signal = signalResult.status === "fulfilled" ? signalResult.value : null;
+  const performance = performanceResult.status === "fulfilled" ? performanceResult.value : null;
+  const importantNews = Array.isArray(news.items) ? news.items.slice(0, 3).map((item) => ({
+    title: item.title,
+    publisher: item.publisher || item.source || null,
+    link: item.link || item.url || null,
+    source: item.source,
+    url: item.url,
+    publishedAt: item.publishedAt,
+    sentiment: item.sentiment,
+    impact: item.impact,
+    impactScore: Number.isFinite(Number(item.impactScore)) ? Number(item.impactScore) : null,
+    turkishSummary: item.turkishSummary || item.summary || "Türkçe özet hazırlanıyor.",
+    importanceReason: buildNewsImportanceReason(item),
+    reactions: {
+      plus1d: null,
+      plus3d: null,
+      plus7d: null
+    }
+  })) : [];
+  const priceReaction = {};
+  for (const day of [1, 3, 7]) {
+    const pct = computePriceReaction(performance.points || [], day);
+    priceReaction[`plus${day}d`] = pct;
+  }
+  const analystTargetPrice = Number.isFinite(Number(analysis.targetMeanPrice))
+    ? Number(analysis.targetMeanPrice)
+    : Number.isFinite(Number(analysis.targetPrice))
+      ? Number(analysis.targetPrice)
+      : null;
+  const settings = adminFoundation.getInternalSettings();
+  const llm = adminFoundation.getInternalLlm();
+  const llmConfigured = Boolean(settings.llmResearchEnabled && llm.enabled && llm.apiKey);
+  const summaryTr = buildResearchSummary({ symbol: key, snapshot, news, analysis, signal, priceReaction, llmConfigured, analystTargetPrice });
+  const technicalSummary = buildTechnicalSummary(signal);
+  const riskSummary = buildRiskSummary(signal, snapshot);
+  const technicalSummaryDetail = buildTechnicalSummaryDetail(signal);
+  const riskSummaryDetail = buildRiskSummaryDetail(signal, snapshot);
+  const weeklySummary = buildWeeklySummary({ symbol: key, news, signal, priceReaction });
+  for (const item of importantNews) {
+    item.reactions = { ...priceReaction };
+  }
+  const payload = {
+    symbol: key,
+    price: Number.isFinite(Number(snapshot.price)) ? Number(snapshot.price) : null,
+    summaryTr,
+    weeklySummary,
+    technicalSummary,
+    technicalSummaryDetail,
+    riskSummary,
+    riskSummaryDetail,
+    importantNews,
+    items: importantNews,
+    impactScore: Number(news.impactSummary.averageImpactScore || 0),
+    sentimentScore: Number(news.impactSummary.averageSentimentScore || 0),
+    newsImpact: news.impactSummary || null,
+    priceReaction,
+    source: {
+      research: "Matrix Research Engine",
+      snapshot: snapshot.source || null,
+      news: news.source || null,
+      analysis: analysis.source || null,
+      signal: "FVT Signal Engine"
+    },
+    provider: "Matrix Research Engine",
+    llmProvider: llmConfigured ? llm.provider : null,
+    generatedAt: Math.floor(Date.now() / 1000),
+    provenance: {
+      snapshot: snapshot.source || null,
+      news: news.source || null,
+      analysis: analysis.source || null,
+      signal: "FVT Signal Engine",
+      llm: llmConfigured ? "configured" : "configured-degil"
+    },
+    signalSnapshot: signal ? {
+      signal: signal.signal,
+      label: signal.label,
+      score: signal.score,
+      confidence: signal.confidence,
+      riskScore: signal.riskScore,
+      reasons: signal.reasons || []
+    } : null,
+    analyst: {
+      available: Boolean(analysis.available || analystTargetPrice || analysis.recommendation),
+      targetPrice: analystTargetPrice,
+      targetMeanPrice: analystTargetPrice,
+      recommendation: analysis.recommendation || null,
+      currentPrice: Number.isFinite(Number(snapshot.price)) ? Number(snapshot.price) : null,
+      source: analysis.source || null,
+      updatedAt: analysis.updatedAt || null,
+      notes: analysis.warning || null
+    },
+    analystTargetPrice,
+    snapshotStored: false
+  };
+  try {
+    adminFoundation.recordResearchSnapshot(payload);
+    payload.snapshotStored = true;
+  } catch (error) {
+    pushErrorLog({ url: `/api/research/${key}` }, error);
+  }
+  return payload;
+}
+
+function buildResearchSummary({ symbol, snapshot, news, signal, priceReaction, llmConfigured, analystTargetPrice }) {
+  const price = Number.isFinite(Number(snapshot.price)) ? `$${Number(snapshot.price).toFixed(2)}` : "güncel fiyat yok";
+  const signalText = signal.label ? `${signal.label} (${signal.score}/100)` : "sinyal üretilemedi";
+  const newsCount = Number(news.impactSummary.total || news.items.length || 0);
+  const sentiment = news.impactSummary.averageSentimentScore > 0.25 ? "pozitif" : news.impactSummary.averageSentimentScore < -0.25 ? "negatif" : "nötr";
+  const target = Number.isFinite(Number(analystTargetPrice)) ? `$${Number(analystTargetPrice).toFixed(2)}` : "analist hedefi yok";
+  const reaction = Number.isFinite(priceReaction.plus7d) ? `7 günlük fiyat tepkisi ${priceReaction.plus7d.toFixed(2)}%` : "haber sonrası fiyat tepkisi için yeterli veri yok";
+  const llmNote = llmConfigured ? "LLM ayarı aktif; bu sürümde rule-based özet ana akışı korunur." : "LLM yapılandırması yok; rule-based Türkçe özet kullanılıyor.";
+  return `${symbol} için izleme özeti: fiyat ${price}, teknik görünüm ${signalText}. Haber akışı ${newsCount} kayıtla ${sentiment} tonda. ${reaction}. Analist tarafında ${target}. ${llmNote}`;
+}
+
+function buildTechnicalSummary(signal) {
+  if (!signal) return "Teknik sinyal üretilemedi.";
+  const reasons = Array.isArray(signal.reasons) ? signal.reasons.slice(0, 3).join("; ") : "";
+  const confidence = Number.isFinite(Number(signal.confidence)) ? `%${Math.round(signal.confidence)}` : "güven yok";
+  return `${signal.label || signal.signal || "Sinyal"} skoru ${signal.score ?? "-"} ve güven ${confidence}. ${reasons || "Açıklama verisi hazırlanıyor."}`;
+}
+
+function buildTechnicalSummaryDetail(signal) {
+  return {
+    signal: signal.label || signal.signal || "Sinyal üretilemedi",
+    score: Number.isFinite(Number(signal.score)) ? Number(signal.score) : null,
+    confidence: Number.isFinite(Number(signal.confidence)) ? Number(signal.confidence) : null,
+    risk: signal.risk || signal.riskLevel || null,
+    reasons: Array.isArray(signal.reasons) ? signal.reasons.slice(0, 10) : [],
+    triggerTags: Array.isArray(signal.triggerTags) ? signal.triggerTags.slice(0, 10) : [],
+    indicatorSnapshot: signal.indicatorSnapshot || signal.indicators || {}
+  };
+}
+
+function buildRiskSummary(signal, snapshot) {
+  const riskScore = Number.isFinite(Number(signal.riskScore)) ? Number(signal.riskScore).toFixed(0) : "-";
+  const stale = snapshot.isStale ? "veri stale" : "veri güncel";
+  const risk = signal.risk || "unknown";
+  return `Risk seviyesi ${risk}, risk skoru ${riskScore}. Kaynak durumu: ${stale}.`;
+}
+
+function buildRiskSummaryDetail(signal, snapshot) {
+  const warnings = [];
+  if (snapshot.isStale) warnings.push("Fiyat verisi stale görünüyor.");
+  if (Number(signal.riskScore) >= 70) warnings.push("Risk skoru yüksek bölgede.");
+  if (signal.risk === "high") warnings.push("Sinyal motoru yüksek risk etiketi üretti.");
+  return {
+    level: signal.risk || signal.riskLevel || "unknown",
+    riskScore: Number.isFinite(Number(signal.riskScore)) ? Number(signal.riskScore) : null,
+    warnings,
+    text: buildRiskSummary(signal, snapshot)
+  };
+}
+
+function buildWeeklySummary({ symbol, news, signal, priceReaction }) {
+  const newsCount = Number(news.impactSummary.total || news.items.length || 0);
+  const reaction = Number.isFinite(priceReaction.plus7d) ? `${priceReaction.plus7d.toFixed(2)}%` : "yetersiz veri";
+  return `${symbol} haftalık özet: ${newsCount} haber, ${signal.label || "sinyal yok"} teknik görünüm, 7G fiyat tepkisi ${reaction}.`;
+}
+
+function buildNewsImportanceReason(item) {
+  if (!item) return "Haber etkisi izleme için kaydedildi.";
+  if (item.impact === "high") return "Yüksek etki etiketi nedeniyle öne çıkarıldı.";
+  if (item.sentiment === "positive") return "Pozitif haber tonu nedeniyle izlemeye alındı.";
+  if (item.sentiment === "negative") return "Negatif haber tonu nedeniyle risk takibine alındı.";
+  return "Haber akışındaki güncel başlık olarak izleniyor.";
+}
+
+function computePriceReaction(points = [], days = 1) {
+  const values = points.map((point) => ({ time: Number(point.time), close: Number(point.close) })).filter((point) => Number.isFinite(point.close));
+  if (values.length < 2) return null;
+  const latest = values.at(-1);
+  const targetTime = Number.isFinite(latest.time) ? latest.time - days * 24 * 60 * 60 : null;
+  const base = Number.isFinite(targetTime)
+     ? [...values].reverse().find((point) => Number(point.time) <= targetTime)
+    : values[Math.max(0, values.length - days - 1)];
+  if (!base.close) return null;
+  return ((latest.close - base.close) / base.close) * 100;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -970,11 +1410,12 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
   recordEndpoint(url.pathname);
   try {
+    if (await handleAdminRequest(req, res, url)) return;
     if (url.pathname === "/api/health") {
-      return sendJson(res, 200, { success: true, data: { service: "hisse-price-proxy", version: VERSION, uptimeSec: Math.floor(process.uptime()), now: Math.floor(Date.now() / 1000), sourcePriority: SOURCE_PRIORITY, capabilities: ["snapshots", "history", "performance", "signals", "status"] } });
+      return sendJson(res, 200, { success: true, data: { service: "hisse-price-proxy", version: VERSION, uptimeSec: Math.floor(process.uptime()), now: Math.floor(Date.now() / 1000), sourcePriority: SOURCE_PRIORITY, capabilities: ["snapshots", "history", "performance", "signals", "status", "admin", "research"] } });
     }
     if (url.pathname === "/api/status") {
-      return sendJson(res, 200, { success: true, data: { counters, sources: sourceStats, sourcePriority: SOURCE_PRIORITY, errorLog, rateLimit: { windowMs: RATE_LIMIT_WINDOW_MS, max: RATE_LIMIT_MAX }, cache: { fvtReady: !!fvtCache, history: historyCache.size, performance: performanceCache.size, snapshots: snapshotCache.size, logos: logoCache.size, news: newsCache.size, analysis: analysisCache.size, nasdaqUniverse: nasdaqUniverseCache?.data?.length || 0 }, catalog: { count: catalog.length } } });
+      return sendJson(res, 200, { success: true, data: { counters, sources: sourceStats, sourcePriority: SOURCE_PRIORITY, errorLog, rateLimit: { windowMs: RATE_LIMIT_WINDOW_MS, max: RATE_LIMIT_MAX }, cache: getCacheSummary(), catalog: { count: catalog.length }, admin: adminFoundation.getStatus() } });
     }
     if (url.pathname === "/api/nasdaq-universe" || url.pathname === "/api/nasdaq-universe/sync") {
       const force = url.pathname.endsWith("/sync") || url.searchParams.get("force") === "1";
@@ -988,7 +1429,7 @@ const server = http.createServer(async (req, res) => {
       const universe = await getNasdaqUniverse({ force: url.searchParams.get("force") === "1" });
       const row = universe.data.find((item) => item.symbol === symbol);
       return row
-        ? sendJson(res, 200, { success: true, data: { ...row, source: universe.source, savedAt: universe.savedAt } })
+         ? sendJson(res, 200, { success: true, data: { ...row, source: universe.source, savedAt: universe.savedAt } })
         : sendJson(res, 404, { success: false, message: `${symbol} Nasdaq evreninde bulunamadı` });
     }
     if (url.pathname === "/api/fallback-report") {
@@ -1061,6 +1502,11 @@ const server = http.createServer(async (req, res) => {
       const analysis = await getFinvizAnalysis(decodeURIComponent(analysisMatch[1]).toUpperCase());
       return sendJson(res, 200, { success: true, data: analysis, source: analysis.source });
     }
+    const researchMatch = url.pathname.match(/^\/api\/research\/([^/]+)$/);
+    if (researchMatch) {
+      const research = await createResearch(decodeURIComponent(researchMatch[1]).toUpperCase());
+      return sendJson(res, 200, { success: true, data: research, source: research.provider });
+    }
     const stockMatch = url.pathname.match(/^\/api\/stocks\/([^/]+)$/);
     if (stockMatch) {
       const symbol = decodeURIComponent(stockMatch[1]).toUpperCase();
@@ -1077,6 +1523,6 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, "127.0.0.1", () => {
   console.log(`FVT fiyat proxy calisiyor: http://127.0.0.1:${PORT}`);
-  setTimeout(refreshNasdaqUniverseIfDue, 10_000).unref?.();
-  setInterval(refreshNasdaqUniverseIfDue, NASDAQ_UNIVERSE_TTL_MS).unref?.();
+  setTimeout(refreshNasdaqUniverseIfDue, 10_000).unref();
+  setInterval(refreshNasdaqUniverseIfDue, NASDAQ_UNIVERSE_TTL_MS).unref();
 });

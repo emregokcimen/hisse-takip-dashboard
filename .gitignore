@@ -1,6 +1,7 @@
 node_modules/
 dist/
 outputs/
+data/
 
 .env
 .env.*

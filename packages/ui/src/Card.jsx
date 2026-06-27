@@ -1,7 +1,7 @@
 import React from "react";
 
-export function Card({ children, className = "" }) {
-  return <section className={`ta-card ${className}`}>{children}</section>;
+export function Card({ children, className = "", ...props }) {
+  return <section className={`ta-card ${className}`} {...props}>{children}</section>;
 }
 
 export function CardTitle({ title, subtitle }) {
